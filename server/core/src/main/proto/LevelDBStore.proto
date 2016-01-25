@@ -1,0 +1,42 @@
+package org.hyperledger.model;
+
+message TX {
+	required uint32 version = 1;
+	required uint32 lockTime = 2;
+	message TXIN {
+		required uint32 ix = 1;
+		required bytes sourceHash = 2;
+		required bytes script = 3;
+		required uint32 sequence = 4;
+	}
+	repeated TXIN txin = 3;
+	
+	message TXOUT {
+		required uint64 value = 1;
+		required bytes script = 2;
+		optional bytes color = 3;
+        optional uint64 quantity = 4;
+	}
+	repeated TXOUT txout = 4;
+	repeated bytes blocks = 5;
+	required uint64 fee = 6;
+}
+
+message BLOCKHEADER {
+	required uint32 version = 1;
+	required bytes previousHash = 2;
+	required bytes merkleRoot = 3;
+	required uint32 createTime = 4;
+	required uint32 difficultyTarget = 5;
+	required uint32 nonce = 6;
+
+	required uint32 height = 7;
+	required double chainWork = 8;
+
+	optional bytes inScript = 9;
+	optional bytes nextScriptHash = 10;
+}
+
+message BLOCKCONTENT {
+	repeated bytes txHashes = 1; // suffixed with one byte merkleHeight
+}

@@ -1,0 +1,14 @@
+data
+*.iml
+.idea
+atlassian-ide-plugin.xml
+target
+*.versionsBackup
+server/network/project
+server/network/build.sbt
+server/network/data
+data-*
+*ensime*
+**/dependency-reduced-pom.xml
+.DS_Store
+tags

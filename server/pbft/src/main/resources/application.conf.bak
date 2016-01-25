@@ -1,0 +1,21 @@
+akka {
+   loggers = ["akka.event.slf4j.Slf4jLogger"]
+  loglevel = "DEBUG"
+  stdout-loglevel = "DEBUG"
+  io {
+    tcp {
+      trace-logging: "on"
+    }
+  }
+
+  actor {
+    provider = "akka.cluster.ClusterActorRefProvider"
+    default-dispatcher {
+      # Throughput for default Dispatcher, set to 1 for as fair as possible
+      throughput = 10
+    } }
+  remote {
+    # The port clients should connect to. Default is 2552.
+    netty.tcp.port = 4711
+  }
+}

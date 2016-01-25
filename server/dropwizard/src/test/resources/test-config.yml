@@ -1,0 +1,23 @@
+server:
+    type: simple
+    applicationContextPath: /
+
+logging:
+  level: INFO
+  appenders:
+    - type: console
+      threshold: TRACE
+
+hyperledger:
+  embedded:
+    blockchain:
+      chain: "regtest"
+
+    network:
+      outgoingConnections: 1
+      discovery:
+      - type: fixed
+        peers: ["127.0.0.1:18444"]
+
+    store:
+      memory: true

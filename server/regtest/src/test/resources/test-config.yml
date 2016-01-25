@@ -1,0 +1,21 @@
+server:
+    type: simple
+    applicationContextPath: /
+
+logging:
+  level: INFO
+  appenders:
+    - type: console
+      threshold: TRACE
+
+hyperledger:
+  embedded:
+    p2p:
+      outgoingConnections: 1
+    chain: "regtest"
+    store: "memory"
+
+    server:
+      discovery:
+      - type: fixed
+        peers: ["127.0.0.1:18444"]

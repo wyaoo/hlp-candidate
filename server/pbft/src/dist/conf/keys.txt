@@ -1,0 +1,18 @@
+-*- org -*-
+
+* Sample configuration of nodes
+  |  # | public key                                                         | private key                                          | miner address                      | miner private key                                    |
+  |  1 | 031a8027f5c2ab3f4e3e76c8c38f754484241bb1002b44f8b83217c47bb7cc0a87 | L2uwgqBffvx4KXjbdiVQdFfx4ALrrCbdr2ru7ucjPtbWjPnFCU8e | 1KQ7b8XTWkMGAdTUsELXfL8RsfxemV3oTg | L1iCUVYwbSin3udA5HNpoEyqhXqwGnZe4gdiLin7WGCzrKEjko7e |
+  |  2 | 0316f8caac24fb7dc113f21c870166700bc33377370ed9b3c3b2566858e279522b | L1ovFHeCY9Xz1r9WVZi6s7eA9WXTBsYwnuGoQx7n4ATpdB4AArAL | 1HEUq2xAEmoMhjN8GrZ21jKVg8vTrbExgM | KwnFTRGwHXcK6J9HgTV6DYGRup3Bjt1aTTj6dWU9go7erzTc8wNx |
+  |  3 | 0298751746d1456c8235922a6656caae5c7e7a1ca581de55248b3c3d24ad8daf63 | L27vCQZ6fFEpsjs28XeXczFPZvZR4t5skVBcuf116EvkMBVdNeLG | 15HEXcMQkLgvzw22n5vBHQcWMbjMgSNPR2 | L27vCQZ6fFEpsjs28XeXczFPZvZR4t5skVBcuf116EvkMBVdNeLG |
+  |  4 | 0304ca93368a3e532b346a0e4a21bc233045044203ddf77fd70ccba4f2fb0e642a | KzmZnXr4j7oiTrgHCe1H4wkbYwvDwttCfJUtWhdpKV8vD1RAmQFz | 18qHv21y7X1BjsiWK9heLQ7tmyAsYhHFvz | KzmZnXr4j7oiTrgHCe1H4wkbYwvDwttCfJUtWhdpKV8vD1RAmQFz |
+  |  5 | 027a472938b2d1329a5add16a6d654f63df3e056a8fdc9b0ae3e9bb28c3cb16238 | L2KAgtzJRJAwe74zfimULA5mDgPhvdRhkcSu7BeGjCryjWKr1en2 | 14vA8Mri81VwAiy1o1VEYndECszNSHc5m4 | L2KAgtzJRJAwe74zfimULA5mDgPhvdRhkcSu7BeGjCryjWKr1en2 |
+  |  6 | 031a8d529c9bc0e7b606d84c3dde43ce8787b49dcf279315468f72ffffa66ebe6e | KzNcYA2wv6e8krFDknDPhaoxnh2UMYhMof2fDyUfwbj1RFRthW7r | 1EKPb9UDudZYKCDrJ4fCcCGzyfT46cNUJX | KzNcYA2wv6e8krFDknDPhaoxnh2UMYhMof2fDyUfwbj1RFRthW7r |
+  |  7 | 021198dd0d972b247ec5ecd779cbd3eaf8596c53c3ba495588944dde694535db54 | L1C39Jc9NqPuUUSwbPPbhmycxXYmynRytZWmAwu4z41TuPH7vqLJ | 18TdEzf5cQAmAhZP9hLcYYp5DJ8Cnrxvob | L1C39Jc9NqPuUUSwbPPbhmycxXYmynRytZWmAwu4z41TuPH7vqLJ |
+  |  8 | 02ad1211bf1f43703ab289c7266a99d9ffb6ac9d16112efa13988849e97ebabde4 | L2bR2zFQad7vTSPa4YYHLWaofMgtsknSDdXndNtkjJrouJFnaSfZ | 19NoQnDtkT1EsUfMJftgE8q4m5CqWx3pet | L2bR2zFQad7vTSPa4YYHLWaofMgtsknSDdXndNtkjJrouJFnaSfZ |
+  |  9 | 02f7303c178dd579960b0669af5791a5bcc65126fe58b9051636e7de6d0c1898c6 | KxYicxAXDmndasyGCSQSJuAaZrhTmM3cqeqvjWGRVK8AyZpzkGxC | 14ErDM8y8s9utVpTNFVuLNQJ2wGNdAG6Xj | KxYicxAXDmndasyGCSQSJuAaZrhTmM3cqeqvjWGRVK8AyZpzkGxC |
+  | 10 | 034c2faf62724e9213c116a1947e43aef24f5cde027f2d2048143f16519f9e3e5e | L3nQ3cG9Vx38LCk9gu1m3KtTMiFBGNFqb6b7ymVbSrSdxckJJzsm | 1NDzwktnQHfst4qCzdneFJNvpzxLHs1n9s | L3nQ3cG9Vx38LCk9gu1m3KtTMiFBGNFqb6b7ymVbSrSdxckJJzsm |
+
+  
+ 
+   
