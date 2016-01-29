@@ -83,7 +83,11 @@ class SolicitedConnectionManager(server: ActorRef) extends Actor with ActorLoggi
         maintainConnections()
 
       case PeerConnection.ShookHands(address, version) =>
+        if (version.startHeight > hyperLedger.api.blockStore.getSpvHeight + 144) {
+          server ! SwitchToIBD
+        }
         updateConnections(_.handshakeComplete(version, address, clock.millis()))
+
 
       case PeerConnection.HeadersDownloaded(address) =>
         if (!firstHeaders) {

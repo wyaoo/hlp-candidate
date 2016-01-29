@@ -14,7 +14,6 @@
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-    >>>
 
     <logger name="akka" level="WARN"/>
     <logger name="org.hyperledger" level="WARN"/>
