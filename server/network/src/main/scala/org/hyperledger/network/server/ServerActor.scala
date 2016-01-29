@@ -75,6 +75,15 @@ class ServerActor extends LoggingFSM[ServerState, ServerData] {
   }
 
   when(InitialBlockDownload) {
+    case Event(c: ConnectionMaintenance, d) =>
+      // for the very first connection, if it is at the same chain as we are, they won't send header reply to getheader
+      // for that corner case we must nudge the server into the running state
+      if (d.connections.isEmpty && c.activePeers.values.forall(_.version.startHeight < hyperLedger.api.blockStore.getSpvHeight + 144)) {
+        goto(ServerRunning) using SimpleServerData(c.connectionIDs)
+      } else {
+        stay using d.withConnection(c.connectionIDs)
+      }
+
     case Event("startibd", d: IBDServerData) =>
       runBlockDownloadAction(d, for {
         reassignedDLs <- connectionsChanged(d.connections)
