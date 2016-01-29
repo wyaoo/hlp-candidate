@@ -83,11 +83,7 @@ class SolicitedConnectionManager(server: ActorRef) extends Actor with ActorLoggi
         maintainConnections()
 
       case PeerConnection.ShookHands(address, version) =>
-        if (version.startHeight > hyperLedger.api.blockStore.getSpvHeight + 144) {
-          server ! SwitchToIBD
-        }
         updateConnections(_.handshakeComplete(version, address, clock.millis()))
-
 
       case PeerConnection.HeadersDownloaded(address) =>
         if (!firstHeaders) {
@@ -243,9 +239,10 @@ class PeerConnection(address: InetSocketAddress, server: ActorRef) extends Loggi
   }
 
   when(HeaderDownload) {
-    case Event(pcm@PeerControlMessage(HeadersDownloadComplete, version, actor), _) =>
+    case Event(pcm@PeerControlMessage(HeadersDownloadComplete, version, actor), PeerData(state, peerActor, _)) =>
       context.parent ! HeadersDownloaded(address)
       server ! pcm
+      peerActor ! ServerStateTransition(state)
       goto(Running)
   }
 

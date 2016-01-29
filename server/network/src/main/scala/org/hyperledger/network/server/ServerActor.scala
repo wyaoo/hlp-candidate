@@ -51,7 +51,6 @@ object ServerActor {
   case object Start
   case class PeerControlMessage(message: ControlMessage, peer: Version, peerActor: ActorRef)
   case class ServerControlMessage(message: ControlMessage, peerId: Option[Long])
-  case object SwitchToIBD
 
   def props = Props(classOf[ServerActor])
 }
@@ -72,7 +71,7 @@ class ServerActor extends LoggingFSM[ServerState, ServerData] {
 
   when(ServerStarting) {
     //case Event(Start, d)                    => goto(InitialBlockDownload) using IBDServerData(d.connections)
-    case Event(Start, d)                    => goto(ServerRunning) using SimpleServerData(d.connections)
+    case Event(Start, d)                    => goto(InitialBlockDownload) using IBDServerData(d.connections)
   }
 
   when(InitialBlockDownload) {
@@ -124,8 +123,6 @@ class ServerActor extends LoggingFSM[ServerState, ServerData] {
     case Event(c: ConnectionMaintenance, d) =>
       // TODO implement change in connection during IBD
       stay using d.withConnection(c.connectionIDs)
-    case Event(SwitchToIBD, _) =>
-      goto(InitialBlockDownload)
   }
 
   onTransition {
