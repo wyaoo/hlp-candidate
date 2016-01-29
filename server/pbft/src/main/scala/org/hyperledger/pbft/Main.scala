@@ -24,7 +24,7 @@ import scala.io.Source
 object Main extends App {
   Security.addProvider(new BouncyCastleProvider)
 
-  if (System.getProperty("logback.configurationFile") != null)
+  if (System.getProperty("logback.configurationFile") == null)
     System.setProperty("logback.configurationFile", "conf/logback.xml")
 
   val configFile = if (args.length >= 1) args(0)
