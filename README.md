@@ -40,6 +40,7 @@ Version numbers below indicate the versions used.
  * Java 1.8.0_51 (http://java.oracle.com)
  * JCE 8 (Java Crptography Extension) (http://java.oracle.com)
  * Protobuf compiler 2.5.0 (http://github.com/google/protobuf)
+ * lockfile command 3.22 (from procmail package)
 
 #### Optionally a JMS bus provider
  * e.g. Apache ActiveMQ 5.11.1 (http://activemq.apache.org/)
@@ -52,11 +53,12 @@ Version numbers below indicate the versions used.
  * Download and install the latest Java 8 dmg file from Oracle
  * Download _Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy Files for JDK/JRE 8_ from Oracle, which is a zip file. Extract it and copy the `local_policy.jar` and `US_export_policy.jar` files to your your `<java_runtime_home>/lib/security`
  * ```brew install protobuf250```
+ * ```brew install procmail``` if the command ```lockfile``` is not available on your OSX version
  
 #### Installing Prerequisites on Ubuntu Linux
  * ```add-apt-repository ppa:webupd8team/java```
  * ```apt-get update```
- * ```apt-get install git maven oracle-java8-installer oracle-java8-unlimited-jce-policy protobuf-compiler```
+ * ```apt-get install git maven oracle-java8-installer oracle-java8-unlimited-jce-policy protobuf-compiler procmail```
  
 ### Building Steps
 
