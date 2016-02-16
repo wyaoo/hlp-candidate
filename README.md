@@ -1,18 +1,23 @@
-## Memorandum of Understanding
-This project has specific intentions and guidelines that are provided here. If you do not agree with the provisions in the [MOU](MOU.md), contact the Digital Asset Holdings and do not proceed with accessing, reading or contributing to this project.
+## Notice regarding the Linux Foundation's Hyperledger project
 
-# Hyperledger
-Hyperledger is an enterprise ready blockchain server with a client [API](docs/api.md). Hyperledger has a modular [architecture](docs/architecture.md) and [configurable](docs/configuration.md) network architecture.
+HLP-Candidate is Digital Asset's proposed contribution to the Linux Foundation's [Hyperledger](https://www.hyperledger.org/) project. We have made it available as open source to enable others to explore our architecture and design. Digital Asset's intention is to engage rigorously in the Linux Foundation's [Hyperledger](https://www.hyperledger.org/) project as the community establishes itself, and decides on a code base. Once established, we will transition our development focus to the [Hyperledger](https://www.hyperledger.org/) effort, and this code will be maintained as needed for Digital Asset's use.
 
-Hyperledger implements an append-only log of financial transactions designed to be replicated at multiple organizations without centralized control. Technology companies today are well aware of the benefits of having a data backbone, or Enterprise Service Bus, to coordinate data across services within the company. The goal of Hyperledger is to allow expansion of the data backbone concept to the multi-organization level.
+While we invite contribution to the HLP-Candidate project, we believe that the broader blockchain community's focus should be the [Hyperledger](https://www.hyperledger.org/) project.
 
-Hyperledger is designed to be the lowest level communication and consensus layer and aims to upgrade components of today's global financial infrastructure, which consists of a complex patchwork of systems, protocols, and adapters. We are open sourcing this project with the belief that as a critical part of the new financial infrastructure, this part of the software stack should be commoditized, collaborated on and serve as the robust backbone on which applications can be developed.
+This codebase has been renamed to "HLP-Cadidate" but parts of the code reference "hyperledger". This codebase is one of 4 proposal codebases to the official Hyperledger project, and links to the others can be found in the official [Linux Foundation repository](https://github.com/hyperledger/hyperledger). Hyperledger is a trademark of The Linux Foundation. Linux Foundation is a registered trademark of The Linux Foundation. Linux is a registered trademark of Linus Torvalds.
+
+# HLP-Candidate
+HLP-Candidate is an enterprise ready blockchain server with a client [API](docs/api.md). HLP-Candidate has a modular [architecture](docs/architecture.md) and [configurable](docs/configuration.md) network architecture.
+
+HLP-Candidate implements an append-only log of financial transactions designed to be replicated at multiple organizations without centralized control. Technology companies today are well aware of the benefits of having a data backbone, or Enterprise Service Bus, to coordinate data across services within the company. The goal of HLP-Candidate is to allow expansion of the data backbone concept to the multi-organization level.
+
+HLP-Candidate is designed to be the lowest level communication and consensus layer and aims to upgrade components of today's global financial infrastructure, which consists of a complex patchwork of systems, protocols, and adapters. We are open sourcing this project with the belief that as a critical part of the new financial infrastructure, this part of the software stack should be commoditized, collaborated on and serve as the robust backbone on which applications can be developed.
 
 What we are making available today is the most recent stable version of a combination of many man years of work across multiple startups: Digital Asset, Bits of Proof, Blockstack, and Hyperledger. However, it is still a work in progress and we are in the process of replacing several components, adding others, and integrating with other open source projects. This particularly relates to security, scalability, and privacy, and is outlined in the roadmap below.
 
-Hyperledger was built with the requirements of enterprise architecture in mind by a team that has worked in financial institutions for decades. It has a highly modular design at both the code and runtime levels to allow for integrations with legacy systems. The networking rules are configurable to allow for distinct interoperable consensus groups, each with its own functional and nonfunctional requirements.
+HLP-Candidate was built with the requirements of enterprise architecture in mind by a team that has worked in financial institutions for decades. It has a highly modular design at both the code and runtime levels to allow for integrations with legacy systems. The networking rules are configurable to allow for distinct interoperable consensus groups, each with its own functional and nonfunctional requirements.
 
-Hyperledger utilizes the same UTXO/script based transactional decision of Bitcoin and extends it with features required in financial services. While the public Bitcoin blockchain is not suitable for many uses within regulated financial infrastructure, much of its design and mature cryptography has been withstanding attacks in the wild, protecting tokens with a market cap in the billions of dollars. There has been a large amount of venture investment around Bitcoin and a huge body of development work done around it. By conforming to the UTXO model as a de facto standard there is a larger ecosystem of innovation to draw from.
+HLP-Candidate utilizes the same UTXO/script based transactional decision of Bitcoin and extends it with features required in financial services. While the public Bitcoin blockchain is not suitable for many uses within regulated financial infrastructure, much of its design and mature cryptography has been withstanding attacks in the wild, protecting tokens with a market cap in the billions of dollars. There has been a large amount of venture investment around Bitcoin and a huge body of development work done around it. By conforming to the UTXO model as a de facto standard there is a larger ecosystem of innovation to draw from.
 
 Digital Asset has also started working on a prototype implementation of the [Practical Byzantine Fault Tolerance](docs/pbft.md) consensus module as a replacement for Proof of Work. We are collaborating with many of the other members of the project on the consensus module to ensure there is a scalable, secure, Byzantine Fault Tolerant consensus protocol that can provide settlement finality for wholesale financial institutions.
 
@@ -123,4 +128,4 @@ Start and stop scripts use _PID.LOCK_ file. Do not remove it manually because th
 
 ## Contributing
 [How to contribute?](docs/contributing.md)
-[Hyperledger Mailing List](https://groups.google.com/a/digitalasset.com/forum/?hl=en#!forum/hyperledger)
+[Digital Asset's HLP-Candidate Mailing List](https://groups.google.com/a/digitalasset.com/forum/?hl=en#!forum/HLP-Candidate)

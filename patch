@@ -1,0 +1,87 @@
+diff --git a/MOU.md b/MOU.md
+deleted file mode 100644
+index e31d4d2..0000000
+--- a/MOU.md
++++ /dev/null
+@@ -1,37 +0,0 @@
+-#Memorandum of Understanding
+-
+-This is a Memorandum of Understanding (“MOU”) between Digital Asset Holdings (“DAH”) and you (“Supporter”).  The purpose of this MOU is to confirm the discussions between Supporter and DAH with respect to our intention to collaborate on the Open Blockchain Project (the “Project”), under the DAH Agreement for Exchange of Confidential Information (“NDA”) and the Apache License v.2.0 (“ASL”).  
+-
+-In order to ensure that the parties understand the nature and the purpose of these discussions so that no misunderstanding occurs, we wish to provide a framework for the Project.  While this MOU sets forth the intentions and understandings of the parties, with the exception of Sections A, B, C and D below it is not binding and creates no legal obligations for either party.  The NDA, when signed, and the ASL will be binding and provide the terms under which the Project will be conducted.  
+-
+-The following describes a general outline of the Project:
+-
+-It is observed that no currently existing blockchain implementation is suitable to enterprise use cases being proposed, planned and executed today around banking, and financial services transactions. Therefore, it is proposed that parties work together to create a new open source blockchain implementation, with the goal of ultimately submitting it to an open source community or organization to then further shepherd it along. As an open source project, we would expect the implementation to grow organically with the contributions of the community.  The following are attributes which shall be prioritized at the outset:
+-
+-* Private Transactions
+-* Multiple defined assets
+-* Shared replicated ledger
+-* Modular consensus algorithm framework
+-* Enterprise Application Programming Interface
+-* A testnet
+-* Command line interface
+-* Document linking
+-* Scalability and performance to meet specifications of specific industrial use cases (transactions per second, etc., addressing over long-term use)
+-
+-In general, the goal of the Project is to make blockchain suitable for enterprise business, to deliver a blockchain implementation that enables all parties to conduct industry-grade uses involving material transfers of valuable assets securely, privately, and productively in a production environment that stands the test of time.
+-
+-Supporter and DAH intend to hold regularly scheduled executive, marketing and sales, and technical meetings for strategy discussions and to review the status and progress of the Project.
+-
+-General understandings under this MOU
+-
+-A. **Contributions and Confidentiality**  DAH has set up a GitHub repository and community forums (e.g., Slack) where DAH, Supporter and other contributors will make comments and deposit code and documentation under the ASL in support of the Project.  Unless and until DAH decides to announce the Project, it will remain confidential under the terms of the NDA.  Notwithstanding anything to the contrary in this MOU or the NDA, DAH is free to publicly announce the Project, and to selectively or publicly open the Project’s GitHub repository to others and/or to authorize a third party organization to assume the role of hosting and managing the Project.  Supporter acknowledges that its identity and access to the GitHub repository and other community forums will be known to other participants in the GitHub repository and community forums. When DAH announces the Project publically, Supporter has the option at its sole discretion to be named or not named in the announcement. DAH will get permission via email acknowledgement to name the Supporter prior to any formal DAH public announcement. When the GitHub repository is made public, Supporter understands and agrees that its contributions will, naturally, at that time be disclosed publicly.
+-
+-B.	**Termination**  This MOU provides a framework for the Project.  Either party may decide not to proceed by providing 5 days written notice of its intent to terminate this MOU and the NDA.  After such date, neither party shall have any further obligations to the other party pursuant to this MOU and the NDA, except as may be expressly provided in the applicable document.  For the avoidance of doubt, the licenses granted by DAH and Supporter under the ASL in connection with the Project shall survive any such termination.
+-
+-C.	**Nonexclusive Relationship**  Nothing contained in this MOU shall be deemed to be a restriction of any type on either party’s ability to freely compete or to enter into “partnering” relationships with other entities.   Any decision by either party to forego, or engage in any other business opportunity or any other activity, to alter any business plan or direction, or to make any investment in anticipation of the consummation of any transaction contemplated by the parties, is at the sole discretion of the party electing to do so, and will not create any actual or potential liability or obligation for the other party, even if that party is aware of, or has been informed of or has indicated approval of any such action, decision or election unless agreed to otherwise in an agreement signed by both parties. In the event of termination of this MOU, neither party will be restricted as a result of these discussions and in any event each party is free to pursue a similar business relationship with others at any time.
+-
+-D.	**Costs** The cost incurred by each party in connection with the Project, including without limitation legal and attorney, technical and research, financial and other advisory fees, will be borne solely by the party which incurred them.
+-
+-This MOU supersedes all prior proposals and discussions and along with the NDA and the ASL is the complete and exclusive statement of the understanding between DAH and Supporter as to the subject matter.   This MOU cannot be modified except by a comprehensive writing signed by an authorized representative of each party that specifically amends this MOU.
+-
+-By accessing, reading and/or contributing to this GitHub repository, you indicate agreement with this MOU on behalf of your company.
+\ No newline at end of file
+diff --git a/README.md b/README.md
+index 681a155..8610844 100644
+--- a/README.md
++++ b/README.md
+@@ -1,18 +1,23 @@
+-## Memorandum of Understanding
+-This project has specific intentions and guidelines that are provided here. If you do not agree with the provisions in the [MOU](MOU.md), contact the Digital Asset Holdings and do not proceed with accessing, reading or contributing to this project.
++## Notice regarding the Linux Foundation's Hyperledger project
+ 
+-# Hyperledger
+-Hyperledger is an enterprise ready blockchain server with a client [API](docs/api.md). Hyperledger has a modular [architecture](docs/architecture.md) and [configurable](docs/configuration.md) network architecture.
++HLP-Candidate is Digital Asset's proposed contribution to the Linux Foundation's [Hyperledger](https://www.hyperledger.org/) project. We have made it available as open source to enable others to explore our architecture and design. Digital Asset's intention is to engage rigorously in the Linux Foundation's [Hyperledger](https://www.hyperledger.org/) project as the community establishes itself, and decides on a code base. Once established, we will transition our development focus to the [Hyperledger](https://www.hyperledger.org/) effort, and this code will be maintained as needed for Digital Asset's use.
+ 
+-Hyperledger implements an append-only log of financial transactions designed to be replicated at multiple organizations without centralized control. Technology companies today are well aware of the benefits of having a data backbone, or Enterprise Service Bus, to coordinate data across services within the company. The goal of Hyperledger is to allow expansion of the data backbone concept to the multi-organization level.
++While we invite contribution to the HLP-Candidate project, we believe that the broader blockchain community's focus should be the [Hyperledger](https://www.hyperledger.org/) project.
+ 
+-Hyperledger is designed to be the lowest level communication and consensus layer and aims to upgrade components of today's global financial infrastructure, which consists of a complex patchwork of systems, protocols, and adapters. We are open sourcing this project with the belief that as a critical part of the new financial infrastructure, this part of the software stack should be commoditized, collaborated on and serve as the robust backbone on which applications can be developed.
++This codebase has been renamed to "HLP-Cadidate" but parts of the code reference "hyperledger". This codebase is one of 4 proposal codebases to the official Hyperledger project, and links to the others can be found in the official [Linux Foundation repository](https://github.com/hyperledger/hyperledger). Hyperledger is a trademark of The Linux Foundation. Linux Foundation is a registered trademark of The Linux Foundation. Linux is a registered trademark of Linus Torvalds.
++
++# HLP-Candidate
++HLP-Candidate is an enterprise ready blockchain server with a client [API](docs/api.md). HLP-Candidate has a modular [architecture](docs/architecture.md) and [configurable](docs/configuration.md) network architecture.
++
++HLP-Candidate implements an append-only log of financial transactions designed to be replicated at multiple organizations without centralized control. Technology companies today are well aware of the benefits of having a data backbone, or Enterprise Service Bus, to coordinate data across services within the company. The goal of HLP-Candidate is to allow expansion of the data backbone concept to the multi-organization level.
++
++HLP-Candidate is designed to be the lowest level communication and consensus layer and aims to upgrade components of today's global financial infrastructure, which consists of a complex patchwork of systems, protocols, and adapters. We are open sourcing this project with the belief that as a critical part of the new financial infrastructure, this part of the software stack should be commoditized, collaborated on and serve as the robust backbone on which applications can be developed.
+ 
+ What we are making available today is the most recent stable version of a combination of many man years of work across multiple startups: Digital Asset, Bits of Proof, Blockstack, and Hyperledger. However, it is still a work in progress and we are in the process of replacing several components, adding others, and integrating with other open source projects. This particularly relates to security, scalability, and privacy, and is outlined in the roadmap below.
+ 
+-Hyperledger was built with the requirements of enterprise architecture in mind by a team that has worked in financial institutions for decades. It has a highly modular design at both the code and runtime levels to allow for integrations with legacy systems. The networking rules are configurable to allow for distinct interoperable consensus groups, each with its own functional and nonfunctional requirements.
++HLP-Candidate was built with the requirements of enterprise architecture in mind by a team that has worked in financial institutions for decades. It has a highly modular design at both the code and runtime levels to allow for integrations with legacy systems. The networking rules are configurable to allow for distinct interoperable consensus groups, each with its own functional and nonfunctional requirements.
+ 
+-Hyperledger utilizes the same UTXO/script based transactional decision of Bitcoin and extends it with features required in financial services. While the public Bitcoin blockchain is not suitable for many uses within regulated financial infrastructure, much of its design and mature cryptography has been withstanding attacks in the wild, protecting tokens with a market cap in the billions of dollars. There has been a large amount of venture investment around Bitcoin and a huge body of development work done around it. By conforming to the UTXO model as a de facto standard there is a larger ecosystem of innovation to draw from.
++HLP-Candidate utilizes the same UTXO/script based transactional decision of Bitcoin and extends it with features required in financial services. While the public Bitcoin blockchain is not suitable for many uses within regulated financial infrastructure, much of its design and mature cryptography has been withstanding attacks in the wild, protecting tokens with a market cap in the billions of dollars. There has been a large amount of venture investment around Bitcoin and a huge body of development work done around it. By conforming to the UTXO model as a de facto standard there is a larger ecosystem of innovation to draw from.
+ 
+ Digital Asset has also started working on a prototype implementation of the [Practical Byzantine Fault Tolerance](docs/pbft.md) consensus module as a replacement for Proof of Work. We are collaborating with many of the other members of the project on the consensus module to ensure there is a scalable, secure, Byzantine Fault Tolerant consensus protocol that can provide settlement finality for wholesale financial institutions.
+ 
+@@ -123,4 +128,4 @@ Start and stop scripts use _PID.LOCK_ file. Do not remove it manually because th
+ 
+ ## Contributing
+ [How to contribute?](docs/contributing.md)
+-[Hyperledger Mailing List](https://groups.google.com/a/digitalasset.com/forum/?hl=en#!forum/hyperledger)
+\ No newline at end of file
++[Digital Asset's HLP-Candidate Mailing List](https://groups.google.com/a/digitalasset.com/forum/?hl=en#!forum/HLP-Candidate)
