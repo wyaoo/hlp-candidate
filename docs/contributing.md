@@ -1,4 +1,4 @@
-# Contributing to Hyperledger
+# Contributing to HLP-Candidate
 
 Contribute by forking this repo, work in the fork and then and submit pull requests against this repo.
 
@@ -9,10 +9,10 @@ The recommended way to setup the fork is
 * `git remote add upstream git@github.com:<linux_foundation_owner>/hyperledger.git`
 
 # API
-We build Hyperledger to become the foundation of applications served by an [API](api.md). Changes to the API should be preceeded with in-depth discussion and introduced in accordance with the versioning scheme.
+We build HLP-Candidate to become the foundation of applications served by an [API](api.md). Changes to the API should be preceeded with in-depth discussion and introduced in accordance with the versioning scheme.
 
 # Versioning
-Hyperledger uses major.minor.patch version scheme. Versions within same major and minor but higher patch number should be drop-in backward compatible on API level.
+HLP-Candidate uses major.minor.patch version scheme. Versions within same major and minor but higher patch number should be drop-in backward compatible on API level.
 A version with higher minor within the same major will add and might remove features, break API, database or network drop-in backward compatibility. 
 
 # Pull Requests

@@ -4,7 +4,7 @@ HLP-Candidate is Digital Asset's proposed contribution to the Linux Foundation's
 
 While we invite contribution to the HLP-Candidate project, we believe that the broader blockchain community's focus should be the [Hyperledger](https://www.hyperledger.org/) project.
 
-This codebase has been renamed to "HLP-Cadidate" but parts of the code reference "hyperledger". This codebase is one of 4 proposal codebases to the official Hyperledger project, and links to the others can be found in the official [Linux Foundation repository](https://github.com/hyperledger/hyperledger). Hyperledger is a trademark of The Linux Foundation. Linux Foundation is a registered trademark of The Linux Foundation. Linux is a registered trademark of Linus Torvalds.
+This codebase has been renamed to "HLP-Cadidate" but parts of the code reference "hyperledger" as a result of the legacy usage of that term prior to the mark being transferred to the Linux Foundation. This codebase is one of 4 proposal codebases to the official Hyperledger project, and links to the others can be found in the official [Linux Foundation repository](https://github.com/hyperledger/hyperledger). Hyperledger is a trademark of The Linux Foundation. Linux Foundation is a registered trademark of The Linux Foundation. Linux is a registered trademark of Linus Torvalds.
 
 # HLP-Candidate
 HLP-Candidate is an enterprise ready blockchain server with a client [API](docs/api.md). HLP-Candidate has a modular [architecture](docs/architecture.md) and [configurable](docs/configuration.md) network architecture.
