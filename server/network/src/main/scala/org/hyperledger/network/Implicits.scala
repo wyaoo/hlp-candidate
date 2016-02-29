@@ -15,7 +15,8 @@ package org.hyperledger.network
 
 import java.nio.charset.Charset
 
-import org.hyperledger.common.{Hash, BID, TID}
+import org.hyperledger.common.{Transaction, Hash, BID, TID}
+import scala.collection.JavaConverters._
 
 
 object Implicits {
@@ -25,4 +26,12 @@ object Implicits {
   }
 
   implicit val charset = Charset.forName("UTF-8")
+
+  implicit class TxExtra(tx: Transaction) {
+    def sourceInventory = tx.getInputs.asScala
+      .map(_.getSourceTransactionID)
+      .map(InventoryVector.tx)
+      .toList.distinct
+
+  }
 }

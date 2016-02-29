@@ -88,22 +88,6 @@
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>
-                    src/main/resources
-                </directory>
-            </resource>
-            <resource>
-                <directory>
-                    ${project.build.directory}/classes
-                </directory>
-                <includes>
-                    <include>lib/**/*.dylib</include>
-                    <include>lib/**/*.so</include>
-                </includes>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>com.google.protobuf.tools</groupId>

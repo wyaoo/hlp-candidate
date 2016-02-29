@@ -205,8 +205,8 @@ public class ColoredBaseTransactionFactory implements ColoredTransactionFactory 
     }
 
     private ColoredTransactionProposal payFixedForeign(PaymentOptions options, List<ColoredTransactionOutput> receiver) throws HyperLedgerException {
-        Map<Color, Long> needByColor = new HashMap<>();
-        Map<Color, List<ScriptUnit>> receiverByColor = new HashMap<>();
+        Map<Color, Long> needByColor = new LinkedHashMap<>();
+        Map<Color, List<ScriptUnit>> receiverByColor = new LinkedHashMap<>();
         for (int i = 0; i < receiver.size(); ++i) {
             Color c = receiver.get(i).getColor();
             if (!needByColor.containsKey(c)) {
@@ -224,7 +224,7 @@ public class ColoredBaseTransactionFactory implements ColoredTransactionFactory 
 
         List<Color> colors = new ArrayList<>();
         colors.addAll(needByColor.keySet());
-        Collections.sort(colors); // bitcoin last, see compare method of Color
+        Collections.sort(colors, BitcoinComparator.INSTANCE); // bitcoin last, others stable
 
         LinkedList<TransactionOutput> sinks = new LinkedList<>();
         List<Long> colorQuantities = new ArrayList<>();
@@ -276,8 +276,8 @@ public class ColoredBaseTransactionFactory implements ColoredTransactionFactory 
     private ColoredTransactionProposal payFixedNative(PaymentOptions options, List<ColoredTransactionOutput> receivers) throws HyperLedgerException {
         List<Coin> sources = new ArrayList<>();
         LinkedList<TransactionOutput> sinks = new LinkedList<>();
-        Map<Color, Long> needByColor = new HashMap<>();
-        Map<Color, List<ScriptUnit>> receiverByColor = new HashMap<>();
+        Map<Color, Long> needByColor = new LinkedHashMap<>();
+        Map<Color, List<ScriptUnit>> receiverByColor = new LinkedHashMap<>();
 
         for (ColoredTransactionOutput receiver : receivers) {
             Color c = receiver.getColor();
@@ -310,7 +310,7 @@ public class ColoredBaseTransactionFactory implements ColoredTransactionFactory 
 
         List<Color> colors = new ArrayList<>();
         colors.addAll(needByColor.keySet());
-        Collections.sort(colors); // bitcoin last, see compare method of Color
+        Collections.sort(colors, BitcoinComparator.INSTANCE); // bitcoin last, others stable
 
         for (Color c : colors) {
             ColoredCoinBucket s = getSufficientSources(c, needByColor.get(c));

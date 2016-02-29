@@ -13,42 +13,45 @@
  */
 package org.hyperledger.pbft
 
-import akka.actor.{ActorLogging, Actor, ActorRef, Props}
+import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import org.hyperledger.common.Block
 import org.hyperledger.pbft.MinerWorker._
 import org.hyperledger.pbft.PbftHandler.BlockMined
-import org.hyperledger.pbft.PbftMiner.{StopMining, StartMining}
+import org.hyperledger.pbft.PbftMiner.{ StartMining, StopMining }
 
 object PbftMiner {
-  def props(): Props = Props(new PbftMiner())
+  def props() = Props(new PbftMiner())
 
   sealed trait PbftMinerMessage
   case class StartMining() extends PbftMinerMessage
   case class StopMining() extends PbftMinerMessage
 }
 
-class PbftMiner() extends Actor {
+class PbftMiner() extends Actor with ActorLogging {
   import context.dispatcher
 
   val worker = context.system.actorOf(Props[MinerWorker].withDispatcher("hyperledger.pbft.miner-dispatcher"))
   var requester: Option[ActorRef] = None
   val settings = PbftExtension(context.system).settings
 
-  val s = context.system.scheduler
+  def scheduleMining() = context.system.scheduler.scheduleOnce(settings.blockFrequency, worker, Mine())
 
   override def receive = {
 
     case StartMining() =>
       requester = Some(sender())
-      context.system.scheduler.scheduleOnce(settings.blockFrequency, worker, Mine())
+      scheduleMining()
 
     case StopMining() =>
       requester = None
 
     case Mined(block) =>
-      for (r <- requester; b <- block) yield {
-        r ! BlockMined(b)
-        context.system.scheduler.scheduleOnce(settings.blockFrequency, worker, Mine())
+      requester match {
+        case Some(r) =>
+          block.foreach { r ! BlockMined(_) }
+          scheduleMining()
+        case None =>
+          log.debug("Mined block discarded, mining stopped after scheduling")
       }
 
   }

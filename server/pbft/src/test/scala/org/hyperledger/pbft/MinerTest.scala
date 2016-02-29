@@ -29,7 +29,6 @@ class MinerTest extends TestKit(ActorSystem("test", ConfigFactory.parseString(co
   "The PbftMiner" should {
     "be created with the configuration" in {
       val extension = PbftExtension(system)
-      extension.initialize()
       val miner = system.actorOf(PbftMiner.props())
       miner ! StartMining()
       expectMsgClass(15 seconds, classOf[BlockMined])

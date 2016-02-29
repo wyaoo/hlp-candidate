@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/** Create transaction proposals.  The order of outputs is preserved. */
 public class BaseTransactionFactory implements TransactionFactory {
     private static final Logger log = LoggerFactory.getLogger(BaseTransactionFactory.class);
 

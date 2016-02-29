@@ -18,8 +18,7 @@ import org.hyperledger.common._
 import org.hyperledger.core._
 import org.hyperledger.core.bitcoin.BitcoinMiner
 import org.hyperledger.core.conf.{CoreAssembly, CoreAssemblyFactory}
-import Messages._
-
+import scodec.bits.BitVector
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,24 +35,25 @@ object HyperLedgerCoreExtension extends ExtensionId[HyperLedgerCoreExtension] wi
 class HyperLedgerCoreExtension(system: ExtendedActorSystem) extends Extension {
   val config = system.settings.config
 
-  var coreAssembly: CoreAssembly = _ //CoreAssemblyFactory.getAssembly
 
   var hyperLedger: HyperLedger = _
 
   private val settings = HyperLedgerExtensionSettings(system.settings.config)
   val hyperLedgerExecutionContext = system.dispatchers.lookup(settings.dispatcherName)
 
-  def initialize(): Unit = {
-    CoreAssemblyFactory.initialize(system.settings.config)
-    coreAssembly = CoreAssemblyFactory.getAssembly
-    coreAssembly.start()
+  CoreAssemblyFactory.reset()
+  CoreAssemblyFactory.initialize(system.settings.config)
+  var coreAssembly = CoreAssemblyFactory.getAssembly
+  coreAssembly.start()
 
-    hyperLedger = new HyperLedgerAkka(system, coreAssembly, hyperLedgerExecutionContext)
+  hyperLedger = new HyperLedgerAkka(system, coreAssembly, hyperLedgerExecutionContext)
 
-    system.registerOnTermination {
-      coreAssembly.stop()
-    }
+  system.registerOnTermination {
+    coreAssembly.stop()
   }
+
+  @deprecated
+  def initialize(): Unit = ()
 
   def api = {
     if (hyperLedger == null)
@@ -67,7 +67,7 @@ trait HyperLedger {
   def clientEventQueue: ClientEventQueue
   def headerLocatorHashes(): List[BID]
   def missingBlocks(i: Int): List[BID]
-  def catchupHeaders(bids: List[BID]): List[BID]
+  def catchupHeaders(bids: List[BID], hashStop: BID, limit: Int): List[BID]
   def hasBlock(h: BID): Future[Boolean]
   def hasTransaction(h: TID): Future[Boolean]
   def filterUnknown(inventories: List[InventoryVector]): Future[List[InventoryVector]]
@@ -83,11 +83,10 @@ trait HyperLedger {
   def fetchBlock(h: BID): Future[Option[Block]]
   def fetchHeader(h: BID): StoredHeader
   def mempool(): Future[List[TID]]
-  def alert(a: AlertMessage): Unit
-  def reject(r: RejectMessage): Unit
+  def alert(alert: Alert, sig: BitVector): Unit
+  def reject(r: Rejection): Unit
   def getMiner: Option[BitcoinMiner]
 }
-
 
 /**
  * API for accessing HyperLedger functionality in a Scala and Akka friendly way
@@ -98,7 +97,12 @@ class HyperLedgerAkka(system: ActorSystem, core: CoreAssembly, implicit val exec
   val blockStore = core.getBlockStore
   val clientEventQueue = core.getClientEventQueue
 
-  def catchupHeaders(bids: List[BID]): List[BID] = blockStore.catchUpHeaders(bids.asJava, Integer.MAX_VALUE).asScala.toList
+  def catchupHeaders(bids: List[BID], hashStop: BID, limit: Int = Integer.MAX_VALUE): List[BID] =
+    blockStore.catchUpHeaders(bids.asJava, limit).asScala
+      .span(_ != hashStop)
+      .rightMap(_.take(1))
+      .fold(_ ++ _)
+      .toList
 
   def headerLocatorHashes(): List[BID] = blockStore.getHeaderLocator.asScala.toList
 
@@ -110,7 +114,7 @@ class HyperLedgerAkka(system: ActorSystem, core: CoreAssembly, implicit val exec
 
   def filterUnknown(inventories: List[InventoryVector]) = Future.traverse(inventories) {
     case inv if inv.typ == InventoryVectorType.MSG_BLOCK => hasBlock(new BID(inv.hash)).map(inv -> _)
-    case inv if inv.typ == InventoryVectorType.MSG_TX => hasTransaction(new TID(inv.hash)).map(inv -> _)
+    case inv if inv.typ == InventoryVectorType.MSG_TX    => hasTransaction(new TID(inv.hash)).map(inv -> _)
   }.map(_.collect { case (inv, known) if !known => inv })
 
   def addHeaders(headers: List[Header]) = Future(headers foreach blockStore.addHeader)
@@ -121,7 +125,7 @@ class HyperLedgerAkka(system: ActorSystem, core: CoreAssembly, implicit val exec
         (Nil, blockStore.addBlock(block) :: Nil)
       } catch {
         case _: LoggedHyperLedgerException => (block.getID :: Nil, Nil)
-        case e: Throwable => throw e
+        case e: Throwable                  => throw e
       }
     }
   }
@@ -136,7 +140,7 @@ class HyperLedgerAkka(system: ActorSystem, core: CoreAssembly, implicit val exec
         (Nil, blockStore.addTransaction(tx).getID :: Nil)
       } catch {
         case _: LoggedHyperLedgerException => (tx.getID :: Nil, Nil)
-        case e: Throwable => throw e
+        case e: Throwable                  => throw e
       }
     }
   }
@@ -149,10 +153,9 @@ class HyperLedgerAkka(system: ActorSystem, core: CoreAssembly, implicit val exec
 
   def mempool(): Future[List[TID]] = Future(blockStore.getMempoolContent.asScala.toList.map(_.getID))
 
-  def alert(a: AlertMessage) = println(s"Alert received $a")
+  def alert(a: Alert, sig: BitVector) = println(s"Alert received $a")
 
-  def reject(rejectMessage: RejectMessage): Unit = {
-    val r = rejectMessage.payload
+  def reject(r: Rejection): Unit = {
     if ((r.message == "tx" || r.message == "block" || r.message == "sigblock") && r.extraData.isDefined && r.extraData.get.size == 32) {
       blockStore.rejectedByPeer(r.message, new Hash(r.extraData.get.toArray), r.ccode.value)
     }

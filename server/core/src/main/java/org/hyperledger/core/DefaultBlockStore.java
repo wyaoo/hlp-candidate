@@ -1426,8 +1426,8 @@ public class DefaultBlockStore implements BlockStore, BitcoinBlockStore {
     public boolean addMiscData(BID id, byte[] data) throws HyperLedgerException {
         try {
             return singleThreadedExecutor.submit(() -> {
-                if (!persistentBlocks.hasBlock(id)) {
-                    throw LoggedHyperLedgerException.loggedError(log, "Misc data for nonexistant block: " + id);
+                if (!headers.containsKey(id)) {
+                    throw LoggedHyperLedgerException.loggedError(log, "Misc data for nonexistant blockheader: " + id);
                 }
                 readWriteLock.writeLock().lock();
                 try {

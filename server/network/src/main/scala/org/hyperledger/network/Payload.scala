@@ -163,6 +163,10 @@ case class Version(
   startHeight: Int,
   relay: Boolean) {
   def supportsServices(s: BitVector) = (services & s) == s
+
+  override def toString = s"Version(nonce=${nonce.toHexString},startHeigh=$startHeight,version=$version,relay=$relay," +
+    s"services=${services.toHex},timestamp=$timestamp," +
+    s"addrRecv=$addrRecv,addrFrom=$addrFrom,userAgent=$userAgent"
 }
 
 object BlockDataRequest {

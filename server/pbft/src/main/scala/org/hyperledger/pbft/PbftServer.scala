@@ -47,10 +47,14 @@ class PbftServer(bindAddress: InetSocketAddress) extends Actor with ActorLogging
   import PbftServer._
 
   val pbft = PbftExtension(context.system)
-  var connections = ConnectionManagement2.empty
+  val settings = pbft.settings
+  var connections = ConnectionManagement.empty
+  var recoveryStarted = false
 
   val miner = context.actorOf(PbftMiner.props())
-  val handler = context.actorOf(PbftHandler.props(context.self, miner))
+
+  val handlerProps = if (settings.clientMode) PbftClient.props() else PbftHandler.props(context.self, miner)
+  val handler = context.actorOf(handlerProps)
 
   override def preStart = {
     import context.dispatcher
@@ -59,14 +63,14 @@ class PbftServer(bindAddress: InetSocketAddress) extends Actor with ActorLogging
     log.debug("Starting PBFT Server")
 
     val self = context.self
-    val address = pbft.settings.bindAddress
+    val address = settings.bindAddress
     val ourVersion = pbft.ourVersion(address)
 
-    for (nodeConfig <- pbft.settings.otherNodes) {
+    for (nodeConfig <- settings.otherNodes) {
       log.debug(s"Trying to connect to $nodeConfig")
       val (conn, version, broadcaster) = Tcp(context.system)
         .outgoingConnection(nodeConfig.address)
-        .joinMat(PbftStreams.createFlow(pbft.settings, pbft.blockStoreConn, pbft.versionP, handler, nodeConfig.address, ourVersion, outbound = true))(keep3)
+        .joinMat(PbftStreams.createFlow(settings, pbft.blockStoreConn, pbft.versionP, handler, ourVersion, outbound = true))(keep3)
         .run()
 
       conn.map(q => NewConnection(broadcaster, q.remoteAddress))
@@ -77,7 +81,7 @@ class PbftServer(bindAddress: InetSocketAddress) extends Actor with ActorLogging
     }
 
     Tcp(context.system).bind(address.getHostString, address.getPort).runForeach { connection =>
-      val flow = PbftStreams.createFlow(pbft.settings, pbft.blockStoreConn, pbft.versionP, handler, connection.remoteAddress, ourVersion, outbound = false)
+      val flow = PbftStreams.createFlow(settings, pbft.blockStoreConn, pbft.versionP, handler, ourVersion, outbound = false)
       val (versionFuture, broadcaster) = connection.handleWith(flow)
 
       versionFuture.map(v => HandshakeComplete(connection.remoteAddress, v, broadcaster)).pipeTo(self)
@@ -101,8 +105,12 @@ class PbftServer(bindAddress: InetSocketAddress) extends Actor with ActorLogging
     case ConnectionFailed(address, error) => connections = connections.timeout(address)
 
     case HandshakeComplete(connectionAddress, version, peer) =>
-      val (newConnections, _) = connections.handshakeComplete(pbft.settings, peer, connectionAddress, version)
+      val (newConnections, _) = connections.handshakeComplete(settings, peer, connectionAddress, version)
       connections = newConnections
+      if (!recoveryStarted) {
+        peer ! pbft.getHeadersMessage
+        recoveryStarted = true
+      }
 
     case m: PbftMessage => connections.activeConnections.values.foreach(_.peer ! m)
   }

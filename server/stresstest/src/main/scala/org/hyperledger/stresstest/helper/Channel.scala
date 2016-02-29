@@ -25,6 +25,7 @@ import scodec.{Codec, DecodeResult}
 import scala.collection.immutable.List
 import scala.collection.mutable.ListBuffer
 import scala.math._
+import scala.util.Random
 
 
 object Channel {
@@ -65,7 +66,7 @@ object Channel {
         return msgs
       }
     } catch {
-      case e: SocketException => // nothing to do
+      case e: SocketException => println(e) // nothing to do
     }
     List.empty
   }
@@ -171,12 +172,13 @@ object Channel {
   }
 
   def sendVersionMessage(socket: Socket, codec: Codec[BlockchainMessage]): List[BlockchainMessage] = {
+    val nonce = Random.nextLong()
     val message = Version.forNow(
       60002L,
       hex"0x0000000000000000".bits,
       NetworkAddress.forVersion(hex"0x0000000000000000".bits, new InetSocketAddress("0.0.0.0", 0)),
       NetworkAddress.forVersion(hex"0x0000000000000000".bits, new InetSocketAddress("0.0.0.0", 0)),
-      7284544412836900411L,
+      nonce,
       "/Satoshi:0.7.2/",
       212672,
       relay = true)

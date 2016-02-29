@@ -15,8 +15,7 @@ package org.hyperledger.network.server
 
 import java.net.InetSocketAddress
 
-import org.hyperledger.network.{Version, Messages}
-import Messages.VersionMessage
+import org.hyperledger.network.Version
 
 import scalaz.\/
 import scalaz.syntax.either._
@@ -42,6 +41,7 @@ case class ConnectionMaintenance(
   import ConnectionMaintenance._
 
   def connectionIDs: Set[Long] = activePeers.keySet
+  def numberOfActivePeers = activePeers.size
 
   def unavailable(address: InetSocketAddress, now: Long) = {
     val info = peerRegistry.getOrElse(address, PeerInfo(address))

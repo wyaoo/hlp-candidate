@@ -21,13 +21,18 @@ import org.hyperledger.common.color.Color;
 import org.hyperledger.common.color.ColoredTransactionOutput;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Construct a swap transaction - where multiple parties can swap assets.
+ *
+ * Construction is performed in a deterministic way.  The order of outputs in the transaction is identical to the order
+ * of calls to addLeg / addBurn.
+ */
 public class ColoredSwapTransactionBuilder {
-
-    private final Map<ColoredTransactionFactory, Map<Color, Map<AddressChain, Long>>> senders = new HashMap<>();
+    private final Map<ColoredTransactionFactory, Map<Color, Map<AddressChain, Long>>> senders = new LinkedHashMap<>();
 
     public ColoredSwapTransactionBuilder addLeg(ColoredReadOnlyAccount sender, Color color, long quantity, ColoredReadOnlyAccount recipient) {
         return addLeg(sender.createTransactionFactory(), color, quantity, recipient.getChain());
@@ -51,12 +56,12 @@ public class ColoredSwapTransactionBuilder {
         }
         Map<Color, Map<AddressChain, Long>> legs = senders.get(sender);
         if (legs == null) {
-            legs = new HashMap<>();
+            legs = new LinkedHashMap<>();
             senders.put(sender, legs);
         }
         Map<AddressChain, Long> allocation = legs.get(color);
         if (allocation == null) {
-            allocation = new HashMap<>();
+            allocation = new LinkedHashMap<>();
             legs.put(color, allocation);
         }
         allocation.put(recipient, allocation.get(recipient) == null ? quantity : allocation.get(recipient) + quantity);

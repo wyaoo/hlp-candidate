@@ -14,34 +14,17 @@
 package org.hyperledger.pbft
 
 import akka.util.ByteString
-import org.hyperledger.common._
-import org.scalatest.{ FunSuite, Matchers }
+import org.hyperledger.pbft.TestBlockStore._
+import org.scalatest.{FunSuite, Matchers}
 import scodec._
 import scodec.bits._
 
-import shapeless._
-import shapeless.ops.coproduct.Inject
-
-import scala.annotation.implicitNotFound
-import scala.collection.JavaConverters._
-
 object DummyData {
-  def dummyList(elements: Byte, num: Int) = List.fill(num)(elements).toArray
-
-  def dummyHash(elements: Byte) = dummyList(elements, 32)
 
   def dummySignature(elements: Byte) = ByteVector(dummyList(elements, 70))
 
-  val dummyBID = BID.createFromSafeArray(dummyHash(1))
-  val dummyBID2 = BID.createFromSafeArray(dummyHash(2))
   val dummyViewSeq = 3
   val dummyNode = 4
-  val dummyTransaction = new Transaction(1, 0, List[TransactionInput]().asJava, List[TransactionOutput]().asJava)
-  val dummyTransactionList = List(dummyTransaction).asJava
-  val dummyMerkleRoot = MerkleTree.computeMerkleRoot(dummyTransactionList)
-  val dummyBlockHeader = new BitcoinHeader(1, dummyBID, dummyMerkleRoot, 0, 1, 2)
-  val dummyBlockHeader2 = new BitcoinHeader(1, dummyBID2, dummyMerkleRoot, 0, 1, 2)
-  val dummyBlock = new Block(dummyBlockHeader, dummyTransactionList)
   val dummySig = dummySignature(2)
   val dummySig2 = dummySignature(5)
 

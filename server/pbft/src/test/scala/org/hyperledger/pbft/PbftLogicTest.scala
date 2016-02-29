@@ -16,19 +16,19 @@ package org.hyperledger.pbft
 import akka.actor.FSM.{ CurrentState, SubscribeTransitionCallBack, UnsubscribeTransitionCallBack }
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.testkit.{ TestFSMRef, TestKit, TestProbe }
+import com.typesafe.config.ConfigFactory
 import org.hyperledger.common._
+import org.hyperledger.pbft.BlockHandler.ConsensusTimeout
 import org.hyperledger.pbft.Consensus.{ WaitForCommit, WaitForPrepare }
 import org.hyperledger.pbft.PbftLogicTest._
-import org.hyperledger.pbft.ViewChangeWorker.ViewChangeCounting
-import com.typesafe.config.ConfigFactory
+import org.hyperledger.pbft.RecoveryActor.NewHeaders
 import org.scalatest.{ BeforeAndAfterEach, Matchers, WordSpecLike }
 import scodec.Codec
+import TestBlockStore._
 
-class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseString(config)))
+class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.load(ConfigFactory.parseString(config))))
   with WordSpecLike with BeforeAndAfterEach with Matchers {
-  import DummyData._
   import PbftHandler._
-  import TestBlockStore._
 
   import scala.concurrent.duration._
 
@@ -61,25 +61,29 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
     check(response.asInstanceOf[T])
   }
 
-  def receiveNoMessage() = distributer.expectNoMsg(300 millis)
+  def receiveNoMessage() = distributer.expectNoMsg(200 millis)
 
-  def checkPrepare(node: Int, viewSeq: Int, header: Header)(actual: PrepareMessage) = {
+  def checkPrepare(node: Int, viewSeq: Int, header: Header)
+                  (actual: PrepareMessage) = {
     actual.payload.node shouldEqual node
     actual.payload.viewSeq shouldEqual viewSeq
     actual.payload.blockHeader.getID shouldEqual header.getID
   }
 
-  def checkCommit(node: Int, viewSeq: Int, header: Header)(actual: CommitMessage) = {
+  def checkCommit(node: Int, viewSeq: Int, header: Header)
+                 (actual: CommitMessage) = {
     actual.payload.node shouldEqual node
     actual.payload.viewSeq shouldEqual viewSeq
     actual.payload.blockHeader.getID shouldEqual header.getID
   }
 
-  def checkViewChange(node: Int, viewSeq: Int, header: Header, commits: List[Commit])(actual: ViewChangeMessage) = {
+  def checkViewChange(node: Int, viewSeq: Int, header: Header, commits: List[Commit])
+                     (actual: ViewChangeMessage) = {
     actual.payload.node shouldEqual node
     actual.payload.viewSeq shouldEqual viewSeq
     actual.payload.blockHeader.getID shouldEqual header.getID
-    actual.payload.commits shouldEqual commits
+    actual.payload.commits.size shouldEqual commits.size
+    actual.payload.commits.toSet shouldEqual commits.toSet
   }
 
   def checkNewView(node: Int, viewSeq: Int, viewChanges: List[ViewChange], blockHeader: Header, commits: List[Commit])
@@ -88,7 +92,13 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
     actual.payload.viewSeq shouldEqual viewSeq
     actual.payload.viewChanges.toSet shouldEqual viewChanges.toSet
     actual.payload.blockHeader.getID shouldEqual blockHeader.getID
-    actual.payload.commits shouldEqual commits
+    actual.payload.commits.size shouldEqual commits.size
+    actual.payload.commits.toSet shouldEqual commits.toSet
+  }
+
+  def checkGetHeaders(actual: GetHeadersMessage) = {
+    actual.payload.version shouldEqual extension.PROTOCOL_VERSION
+    actual.payload.hashStop shouldEqual BID.INVALID
   }
 
   def checkState[StateT](worker: ActorRef, state: StateT) = {
@@ -98,25 +108,33 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
     worker ! UnsubscribeTransitionCallBack(transitionListener.ref)
   }
 
-  def getDummyConsensus = pbft.stateData.activeConsensus(dummyBlock.getID)
-  def getViewChangeWorker(viewSeq: Int) = pbft.stateData.activeViewChanges(viewSeq)
+  def getConsensusChild(id: BID): ActorRef = {
+    val name = s"consensus-$id"
+    pbft.getSingleChild("blockhandler").getChild(List(name).iterator)
+  }
+
+  def checkNoActiveConsensus(id: BID) = {
+    val child = getConsensusChild(id)
+    child.toString shouldNot contain(id.toString)
+  }
+
+  def getDummyConsensus = getConsensusChild(dummyBlock.getID)
 
   "PrePrepare" should {
     "trigger Prepare" in {
       send(PrePrepare(0, 0, dummyBlock))
-      pbft.stateData.activeConsensus.size shouldEqual 1
-      checkState(getDummyConsensus, WaitForPrepare)
       receive(checkPrepare(1, 0, dummyBlock.getHeader))
+      checkState(getDummyConsensus, WaitForPrepare)
     }
 
     "not trigger Prepare from other view" in {
       send(PrePrepare(0, 2, dummyBlock))
-      pbft.stateData.activeConsensus shouldEqual Map.empty
+      checkNoActiveConsensus(dummyBlock.getID)
     }
 
     "not trigger Prepare from non-primary node" in {
       send(PrePrepare(2, 2, dummyBlock))
-      pbft.stateData.activeConsensus shouldEqual Map.empty
+      checkNoActiveConsensus(dummyBlock.getID)
     }
   }
 
@@ -215,6 +233,8 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
       store.store(dummyBlock, commits)
 
       send(NewView(2, 1, viewChanges, dummyBlockHeader, commits))
+
+      receiveNoMessage()
       pbft.stateData.currentViewSeq shouldEqual 1
     }
 
@@ -230,7 +250,10 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
       store.store(dummyBlock, List.empty)
 
       send(NewView(2, 1, viewChanges, dummyBlockHeader2, commits))
-
+      receive(checkGetHeaders)
+      receiveNoMessage()
+      store.callBlockListener(dummyBlockHeader2.getID)
+      receiveNoMessage()
       pbft.stateData.currentViewSeq shouldEqual 1
     }
 
@@ -240,6 +263,8 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
         .toList
 
       send(NewView(2, 1, viewChanges, dummyBlockHeader2, List.empty))
+
+      receiveNoMessage()
       pbft.stateData.currentViewSeq shouldEqual 0
     }
 
@@ -253,11 +278,15 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
       val invalidCommit = Commit(6, 0, dummyBlockHeader2)
 
       send(NewView(2, 1, viewChanges, dummyBlockHeader2, commits :+ invalidCommit))
+
+      receiveNoMessage()
       pbft.stateData.currentViewSeq shouldEqual 0
     }
 
     "not take PbftHandler to new view without 2f ViewChange in it" in {
       send(NewView(2, 1, List.empty, dummyBlockHeader, List.empty))
+
+      receiveNoMessage()
       pbft.stateData.currentViewSeq shouldEqual 0
     }
 
@@ -268,6 +297,8 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
       val invalidViewChange = ViewChange(6, 1, dummyBlockHeader, List.empty)
 
       send(NewView(2, 1, viewChanges :+ invalidViewChange, dummyBlockHeader, List.empty))
+
+      receiveNoMessage()
       pbft.stateData.currentViewSeq shouldEqual 0
     }
   }
@@ -282,16 +313,17 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
         .toList
 
       viewChanges.filter(_.node < 6).foreach(send)
-      checkState(getViewChangeWorker(1), ViewChangeCounting)
 
       // ViewChange after f+1 ViewChanges
       receive(checkViewChange(1, 1, genesisBlockHeader, List.empty))
 
       send(viewChanges.last)
 
-      // TODO should store new block
-      //      receive(checkNewView(1, 1, viewChanges, dummyBlockHeader, List.empty))
-      receive(checkNewView(1, 1, viewChanges, genesisBlockHeader, List.empty))
+      receive(checkGetHeaders)
+      List.fill(4)(NewHeaders()).foreach { pbft ! _ }
+      store.store(dummyBlock, commits)
+
+      receive(checkNewView(1, 1, viewChanges, dummyBlockHeader, commits))
     }
 
     "not trigger NewView after 2f received and node is primary without signed commits" in {
@@ -305,15 +337,14 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.parseStrin
         .toList
 
       viewChanges.foreach(send)
-      checkState(getViewChangeWorker(1), ViewChangeCounting)
+
+      receiveNoMessage()
     }
   }
 
 }
 
 object PbftLogicTest {
-
-  import DummyData._
 
   def privKey(b: Byte) = new PrivateKey(dummyList(b, 32), true)
   def privStr(pk: PrivateKey) = PrivateKey.serializeWIF(pk)
@@ -349,6 +380,13 @@ object PbftLogicTest {
       |    privateKey: "${privStr(ourPrivateKey)}"
       |    protocolTimeoutSeconds: 60
       |    blockFrequencySeconds: 10
+      |  }
+      |  store {
+      |    memory: true
+      |  }
+      |  mining {
+      |    enabled: false
+      |    minerAddress: ""
       |  }
       |}
       |akka {

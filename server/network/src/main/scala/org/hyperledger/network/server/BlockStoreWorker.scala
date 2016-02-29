@@ -15,19 +15,20 @@ package org.hyperledger.network.server
 
 import akka.actor._
 import org.hyperledger.common.Block
-import org.hyperledger.network.HyperLedgerExtension
+import org.hyperledger.core.BlockStore
 
 import scala.collection.immutable.Queue
+
 
 object BlockStoreWorker {
   case object BlockStoreRequest
   case class StoreBlocks(blocks: Queue[Block])
+
+  def props(blockStore: BlockStore) = Props(classOf[BlockStoreWorker], blockStore)
 }
 
-class BlockStoreWorker extends Actor with ActorLogging {
+class BlockStoreWorker(blockStore: BlockStore) extends Actor with ActorLogging {
   import BlockStoreWorker._
-
-  val hyperLedger = HyperLedgerExtension(context.system)
 
   def receive = {
     case StoreBlocks(blocks) =>
@@ -35,11 +36,11 @@ class BlockStoreWorker extends Actor with ActorLogging {
       for (block <- blocks) {
         try {
           log.debug(s"Storing block ${block.getID}")
-          hyperLedger.api.blockStore.addBlock(block)
+          blockStore.addBlock(block)
         } catch {
           case e: Exception => log.error(e, s"Error while storing block $block")
         }
       }
-      context.parent ! BlockStoreRequest
+      sender() ! BlockStoreRequest
   }
 }

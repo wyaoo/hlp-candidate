@@ -78,20 +78,6 @@ public class NativeAsset implements Color {
     }
 
     @Override
-    public int compareTo(Color o) {
-        if (o.isToken())
-            return -1;
-        if (o instanceof ForeignAsset)
-            return 1;
-        if (!o.isNative()) {
-            throw new IllegalArgumentException("cannot compare to new Asset subclass");
-        }
-
-        // FIXME copied from Color, but this somewhat breaks the compareTo contract
-        return txid.hashCode() - ((NativeAsset) o).txid.hashCode();
-    }
-
-    @Override
     public String toString() {
         return String.format("OutputAsset{id=%s/%02x}", txid, index);
     }

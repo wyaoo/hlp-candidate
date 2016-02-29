@@ -36,7 +36,7 @@ class Headers extends FeatureSpec with GivenWhenThen {
 
       val threadCount = 20
       val iterations = 100
-      val timeoutMillis = 30000
+      val timeoutMillis = 30000L
       When(s"requesting zero hash headers in ${threadCount} threads times ${iterations} iterations with ${timeoutMillis} milliseconds timeout")
       val stats = runner.connectAndExecute(threadCount, iterations, timeoutMillis, sendGetZeroHashHeadersMessage)
 

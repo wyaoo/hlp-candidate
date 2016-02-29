@@ -57,7 +57,6 @@ public class EmbeddedHyperLedger implements HyperLedgerConfiguration {
             public void start() throws Exception {
                 system = ActorSystem.create("EmbeddedHyperLedger", fullConfig);
                 HyperLedgerExtension hyperLedger = HyperLedgerExtension.get(system);
-                hyperLedger.initialize();
 
                 CoreAssembly core = hyperLedger.coreAssembly();
 

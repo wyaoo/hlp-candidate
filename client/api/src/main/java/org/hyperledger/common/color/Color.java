@@ -24,15 +24,8 @@ import java.util.Arrays;
 /**
  * Interface implemented by both colored coins and native assets.
  */
-public interface Color extends Comparable<Color> {
+public interface Color {
     NativeAsset BITCOIN = new NativeAsset(TID.BITCOIN_NATIVE, 0) {
-        @Override
-        public int compareTo(Color o) {
-            if (o == BITCOIN)
-                return 0;
-            return 1;
-        }
-
         @Override
         public Color toCanonical(Transaction tx) {
             return this;

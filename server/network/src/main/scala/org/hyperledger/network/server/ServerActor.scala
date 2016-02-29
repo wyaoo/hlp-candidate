@@ -14,154 +14,46 @@
 package org.hyperledger.network.server
 
 import akka.actor._
-import akka.stream.scaladsl.Tcp
-import org.hyperledger.common.Block
-import org.hyperledger.core.CoreOutbox.{BlockAdded, TransactionAdded}
-import org.hyperledger.network.{Version, Messages, HyperLedgerExtension}
-import Messages._
+import org.hyperledger.core.CoreOutbox.{BlockAdded, P2PEvent, ServerOutboxListener, TransactionAdded}
+import org.hyperledger.network.Messages._
 import org.hyperledger.network.flows._
-import org.hyperledger.network.server.BlockStoreWorker.BlockStoreRequest
-import org.hyperledger.network.server.InitialBlockDownloaderState.{BDLRWS, PendingDownload, _}
+import org.hyperledger.network.{HyperLedgerExtension, Version}
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Queue
-import scalaz.Scalaz._
-import scalaz._
 
-sealed trait ServerState
-case object ServerStarting extends ServerState
-case object InitialBlockDownload extends ServerState
-case object ServerRunning extends ServerState
-
-sealed trait ServerData {
-  def connections: Set[Long]
-  def withConnection(c: Set[Long]): ServerData
-}
-case class SimpleServerData(connections: Set[Long] = Set.empty) extends ServerData {
-  def withConnection(c: Set[Long]) = copy(connections = c)
-}
-case class IBDServerData(connections: Set[Long],
-                         blockDownloaderState: InitialBlockDownloaderState = InitialBlockDownloaderState.empty)
-  extends ServerData {
-  def withConnection(c: Set[Long]) = copy(connections = c)
-  def withDownloadState(bdl: InitialBlockDownloaderState) = copy(blockDownloaderState = bdl)
-}
 
 object ServerActor {
-  case object Start
-  case class PeerControlMessage(message: ControlMessage, peer: Version, peerActor: ActorRef)
-  case class ServerControlMessage(message: ControlMessage, peerId: Option[Long])
+  case class ServerBroadcast(message: BlockchainMessage, peerId: Option[Long])
+  case object GetDownloader
 
   def props = Props(classOf[ServerActor])
 }
 
-class ServerActor extends LoggingFSM[ServerState, ServerData] {
+class ServerActor extends Actor with ActorLogging {
   import ServerActor._
-
   val hyperLedger = HyperLedgerExtension(context.system)
 
-  val DOWNLOAD_WINDOW = 128
-  val BATCH_SIZE = 16
-  val blockDownloadConfig = InitialBlockDownloaderConfig(hyperLedger.api.missingBlocks, DOWNLOAD_WINDOW, BATCH_SIZE)
+  val blockStore = context.actorOf(Props(classOf[BlockStoreWorker], hyperLedger.api.blockStore).withDispatcher(hyperLedger.settings.dispatcherName))
+  val blockDownloader = context.actorOf(
+    InitialBlockDownloader.props(blockStore, InitialBlockDownloaderConfig(hyperLedger.api.missingBlocks)),
+    "InitialBlockDownloader"
+  )
 
-  val blockStore = context.actorOf(Props[BlockStoreWorker].withDispatcher(hyperLedger.settings.dispatcherName))
-  var solicitedConnections: ActorRef = _ //context.actorOf(SolicitedConnectionManager.props(context.self))
+  val solicitedConnections = context.actorOf(ConnectionManager.props)
 
-  startWith(ServerStarting, SimpleServerData())
-
-  when(ServerStarting) {
-    //case Event(Start, d)                    => goto(InitialBlockDownload) using IBDServerData(d.connections)
-    case Event(Start, d)                    => goto(InitialBlockDownload) using IBDServerData(d.connections)
+  override def preStart(): Unit = {
+    hyperLedger.coreAssembly.getCoreOutbox.addListener(new ServerOutboxListener {
+      override def onP2PEvent(e: P2PEvent[_]): Unit = context.self ! e.getContent
+    })
   }
 
-  when(InitialBlockDownload) {
-    case Event(c: ConnectionMaintenance, d) =>
-      // for the very first connection, if it is at the same chain as we are, they won't send header reply to getheader
-      // for that corner case we must nudge the server into the running state
-      if (d.connections.isEmpty && c.activePeers.values.forall(_.version.startHeight < hyperLedger.api.blockStore.getSpvHeight + 144)) {
-        goto(ServerRunning) using SimpleServerData(c.connectionIDs)
-      } else {
-        stay using d.withConnection(c.connectionIDs)
-      }
+  def receive = {
+    case GetDownloader =>
+      sender() ! blockDownloader
+    case event: TransactionAdded =>
+      solicitedConnections ! ServerBroadcast(TxMessage(event.getContent), None)
 
-    case Event("startibd", d: IBDServerData) =>
-      runBlockDownloadAction(d, for {
-        reassignedDLs <- connectionsChanged(d.connections)
-        newDLs <- fillPendingDownloads
-      } yield (reassignedDLs ++ newDLs, Queue.empty))
-
-    case Event(PeerControlMessage(HeadersDownloadComplete, version, actor), d: IBDServerData) =>
-
-      log.info(s"Headers downloaded from peer ${version.nonce.toHexString}")
-      runBlockDownloadAction(d, for {
-        reassignedDLs <- connectionsChanged(d.connections)
-        newDLs <- fillPendingDownloads
-      } yield (reassignedDLs ++ newDLs, Queue.empty))
-
-    case Event(PeerControlMessage(BlockReceived(block), version, actor), d: IBDServerData) =>
-      runBlockDownloadAction(d, for {
-        toDownload <- newBlock(block)
-        toStore <- requestForStore
-      } yield (toDownload, toStore))
-
-    case Event(BlockStoreRequest, d: IBDServerData) => runBlockDownloadAction(d, for {
-      toDownload <- blocksStored
-      toStore <- requestForStore
-    } yield (toDownload, toStore))
+    case event: BlockAdded =>
+      solicitedConnections ! ServerBroadcast(InvMessage.blocks(event.getContent.getAddedToTrunk.asScala), None)
   }
-
-  val IBD_THRESHOLD = 100
-
-  when(ServerRunning) {
-    case Event(PeerControlMessage(HeadersDownloadComplete, version, actor), d: SimpleServerData) =>
-      if (hyperLedger.api.blockStore.getFullHeight + IBD_THRESHOLD < version.startHeight) {
-        goto(InitialBlockDownload) using IBDServerData(d.connections)
-      } else
-        stay()
-
-    case Event(event: TransactionAdded, _) =>
-      solicitedConnections ! ServerControlMessage(SendBroadcast(TxMessage(event.getContent)), None)
-      stay()
-
-    case Event(event: BlockAdded, _) =>
-      solicitedConnections ! ServerControlMessage(SendBroadcast(InvMessage.blocks(event.getContent.getAddedToTrunk.asScala)), None)
-      stay()
-  }
-
-  whenUnhandled {
-    case Event(c: ConnectionMaintenance, d) =>
-      // TODO implement change in connection during IBD
-      stay using d.withConnection(c.connectionIDs)
-  }
-
-  onTransition {
-    case ServerStarting -> _ =>
-      solicitedConnections = context.actorOf(SolicitedConnectionManager.props(context.self))
-    case _ -> InitialBlockDownload => context.self ! "startibd"
-  }
-
-  def runBlockDownloadAction(oldState: IBDServerData, action: BDLRWS[(List[PendingDownload], Queue[Block])]) = {
-    val (logs, (toDownload, toStore), newDLState) = action.run(blockDownloadConfig, oldState.blockDownloaderState)
-
-    logs foreach log.debug
-
-    // storing downloaded stuff
-    if (toStore.nonEmpty) {
-      log.debug(s"Sending blocks to blockstore: ${toStore.map(_.getID)}")
-      blockStore ! BlockStoreWorker.StoreBlocks(toStore)
-    }
-    // sending download requests
-    for (dl <- toDownload) {
-      solicitedConnections ! ServerControlMessage(DownloadBlocks(dl.hashes), Some(dl.connection))
-    }
-
-    log.debug(s"[blockStoreQueue=${newDLState.blockStoreQueue.size}]")
-
-    newDLState match {
-      case dls if dls.fullSize == 0 => goto(ServerRunning) using SimpleServerData(oldState.connections)
-      case dls                      => stay() using oldState.withDownloadState(newDLState)
-    }
-  }
-
-  initialize()
 }

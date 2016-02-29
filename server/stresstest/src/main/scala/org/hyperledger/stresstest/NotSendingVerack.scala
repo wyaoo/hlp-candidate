@@ -35,8 +35,8 @@ class NotSendingVerack extends FeatureSpec with GivenWhenThen {
       // nothing to do here
 
       var replyMessages2: List[BlockchainMessage] = List.empty
-      val timeoutMillis = 5000
-      val thresholdMillis = 1000
+      val timeoutMillis = 5000L
+      val thresholdMillis = 1000L
       Then(s"the server disconnects after about ${timeoutMillis / 1000} seconds")
       Thread.sleep(timeoutMillis - thresholdMillis)
       replyMessages2 = sendPingMessage(socket, codec)

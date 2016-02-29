@@ -15,6 +15,8 @@ package org.hyperledger.examples.dropwizard;
 
 import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import io.dropwizard.Application;
+import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
+import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -45,6 +47,11 @@ public class BlockExplorerApp extends Application<BlockExplorerConfiguration> {
 
     @Override
     public void initialize(Bootstrap<BlockExplorerConfiguration> bootstrap) {
+        bootstrap.setConfigurationSourceProvider(
+                new SubstitutingSourceProvider(bootstrap.getConfigurationSourceProvider(),
+                        new EnvironmentVariableSubstitutor()
+                )
+        );
         hyperLedgerBundle = new HyperLedgerBundle<BlockExplorerConfiguration>() {
             @Override
             protected HyperLedgerConfiguration getSupernodeConfiguration(BlockExplorerConfiguration configuration) {

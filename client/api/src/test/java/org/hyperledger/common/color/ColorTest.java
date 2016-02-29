@@ -64,19 +64,6 @@ public class ColorTest {
     }
 
     @Test
-    public void testCompare() {
-        assertEquals(1, BITCOIN.compareTo(nativeAsset));
-        assertEquals(1, BITCOIN.compareTo(foreignAsset));
-        assertEquals(-1, nativeAsset.compareTo(BITCOIN));
-        assertEquals(-1, foreignAsset.compareTo(BITCOIN));
-        assertEquals(0, BITCOIN.compareTo(BITCOIN));
-        assertEquals(1, nativeAsset.compareTo(foreignAsset));
-        assertEquals(-1, foreignAsset.compareTo(nativeAsset));
-        assertEquals(0, foreignAsset.compareTo(foreignAsset));
-        assertEquals(0, nativeAsset.compareTo(nativeAsset));
-    }
-
-    @Test
     public void testSerializeOutput() throws HyperLedgerException, IOException {
         ColoredTransactionOutput output = ColoredTransactionOutput.create().payTo(address).value(1234).build();
         ColoredTransactionOutput restore = roundTrip(output);

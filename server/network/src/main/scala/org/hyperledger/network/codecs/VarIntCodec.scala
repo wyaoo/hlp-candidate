@@ -38,7 +38,7 @@ private[codecs] class VarIntCodec[T](p: Long => Attempt[T])(implicit val I: Inte
     case n if n == 0xfd => ulongL(16).emap(l => if (l > 0xfcL) successful(l) else NotMinimal)
     case n if n == 0xfe => ulongL(32).emap(l => if (l > 0xffffL) successful(l) else NotMinimal)
     case n if n == 0xff => longL(64).emap(l => if (l > 0xffffffffL) successful(l) else NotMinimal)
-    case n              => provide(n)
+    case n              => provide(n.toLong)
   }
 
   override def decode(bits: BitVector) = for {

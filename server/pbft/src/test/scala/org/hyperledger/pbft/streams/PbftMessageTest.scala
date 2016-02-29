@@ -26,10 +26,10 @@ import org.scalatest.{Matchers, WordSpecLike}
 
 import scala.concurrent.Await
 
-class PbftMessageTest extends TestKit(ActorSystem("test", ConfigFactory.parseString(PbftLogicTest.config)))
+class PbftMessageTest extends TestKit(ActorSystem("test", ConfigFactory.load(ConfigFactory.parseString(PbftLogicTest.config))))
   with WordSpecLike with Matchers {
 
-  import DummyData._
+  import TestBlockStore._
   import system.dispatcher
 
   import scala.concurrent.duration._
@@ -65,12 +65,12 @@ class PbftMessageTest extends TestKit(ActorSystem("test", ConfigFactory.parseStr
   val ourVersion = HandshakeStageTest.createVersion(4)
   val theirVersion = HandshakeStageTest.createVersion(0)
 
-  val flow = PbftStreams.createFlow(settings, store, extension.versionP, handler, address, ourVersion, outbound = true)
+  val flow = PbftStreams.createFlow(settings, store, extension.versionP, handler, ourVersion, outbound = true)
   val codec = PbftMessage.messageCodec(PbftStreams.NETWORK_MAGIC)
 
   "Sending in a PrePrepare to the flow" should {
     "trigger Prepare on the broadcaster" in {
-      val prePrepareMessage =  PrePrepareMessage(PrePrepare(0, 0, dummyBlock).sign(settings.privateKey).require)
+      val prePrepareMessage =  PrePrepareMessage(PrePrepare(0, 0, dummyBlock).sign(settings.privateKey.get).require)
       val input: List[PbftMessage] = List(VersionMessage(theirVersion), VerackMessage(), prePrepareMessage)
       val inputBytes: List[ByteString] = input.map { m => ByteString(codec.encode(m).require.toByteBuffer) }
 

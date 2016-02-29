@@ -47,8 +47,8 @@ object Messages {
   case class GetDataMessage(inventory: List[InventoryVector]) extends BlockchainMessage
 
   case class NotFoundMessage(inventory: List[InventoryVector]) extends DataMessage
-  case class GetBlocksMessage(payload: BlockDataRequest) extends BlockchainMessage
-  case class GetHeadersMessage(payload: BlockDataRequest) extends BlockchainMessage
+  case class GetBlocksMessage(payload: BlockDataRequest) extends DataMessage
+  case class GetHeadersMessage(payload: BlockDataRequest) extends DataMessage
   case class TxMessage(tx: Transaction) extends DataMessage
   case class BlockMessage(block: Block) extends DataMessage
   case class SignedBlockMessage(block: Block) extends DataMessage

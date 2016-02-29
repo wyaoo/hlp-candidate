@@ -13,8 +13,7 @@
  */
 package org.hyperledger.pbft
 
-import org.hyperledger.common.{ByteUtils, PrivateKey}
-import com.typesafe.config.ConfigException.{Missing, BadValue}
+import com.typesafe.config.ConfigException.BadValue
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, WordSpec}
 
@@ -44,26 +43,27 @@ class PbftSettingsTest extends WordSpec with Matchers {
           PbftSettings.fromConfig(asConf(
             """
               |nodes: [
-              |    {address: "localhost:1234", publicKey: "0279f6a3d862c7b367524e7d0875fb85314b4f960ceeb2526a2ea0e8585dc8ff69"}
+              |    {addressHost: "localhost", addressPort: "1234", publicKey: "0279f6a3d862c7b367524e7d0875fb85314b4f960ceeb2526a2ea0e8585dc8ff69"}
               |]
               |privateKey: "L3i1bb4tPemhifqwqa9s5hriARpP4s1edkLcJ6xrsqLnnr3jGLcL"
             """.stripMargin))
         }
       }
     }
+
     "no private key set" should {
-      "throw Missing exception" in {
-        intercept[Missing] {
-          PbftSettings.fromConfig(asConf(
-            """
-              |nodes: [
-              |    {address: "localhost:1234", publicKey: "0279f6a3d862c7b367524e7d0875fb85314b4f960ceeb2526a2ea0e8585dc8ff69"}
-              |    {address: "localhost:2345", publicKey: "0385ea1509ab2dfbb375ea5e41819ebaf49127df9fcec70a93b84b0aa57f6b4642"}
-              |]
-            """.stripMargin))
-        }
+      "enable client mode" in {
+        val settings = PbftSettings.fromConfig(asConf(
+          """
+            |nodes: [
+            |    {address: "localhost:1234", publicKey: "0279f6a3d862c7b367524e7d0875fb85314b4f960ceeb2526a2ea0e8585dc8ff69"}
+            |    {address: "localhost:2345", publicKey: "0385ea1509ab2dfbb375ea5e41819ebaf49127df9fcec70a93b84b0aa57f6b4642"}
+            |]
+          """.stripMargin))
+        settings.clientMode shouldBe true
       }
     }
+
     "duplicate address is set" should {
       "throw BadValue exception" in {
         intercept[BadValue] {
@@ -78,6 +78,7 @@ class PbftSettingsTest extends WordSpec with Matchers {
         }
       }
     }
+
     "duplicate key is set" should {
       "throw BadValue exception" in {
         intercept[BadValue] {
@@ -92,6 +93,7 @@ class PbftSettingsTest extends WordSpec with Matchers {
         }
       }
     }
+
     "minimal configuration set" should {
       "create the settings object" in {
         val settings = PbftSettings.fromConfig(asConf(
@@ -104,6 +106,7 @@ class PbftSettingsTest extends WordSpec with Matchers {
           """.stripMargin))
         settings.nodes.size shouldBe 2
         settings.otherNodes.size shouldBe 1
+        settings.clientMode shouldBe false
       }
     }
   }

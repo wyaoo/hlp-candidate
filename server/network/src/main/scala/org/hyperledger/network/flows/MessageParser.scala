@@ -44,8 +44,7 @@ object MessageParser {
       msgCodec.encode(elem).fold(
         e => ctx.fail(new RuntimeException(e.messageWithContext)),
         bits => ctx.push(bits.bytes.toByteString)
-      )
-    }
+      )    }
   }
 
   private class BitcoinMessageStage(magic: Int, maximumMessageLength: Int) extends PushPullStage[ByteString, BlockchainMessage] {

@@ -13,78 +13,57 @@
  */
 package org.hyperledger.pbft
 
-import akka.actor.{ Actor, ActorRef, LoggingFSM, Props }
-import org.hyperledger.common.{ BID, Block, Header }
-import org.hyperledger.network.{InventoryVector, InventoryVectorType}
-import InventoryVectorType.MSG_BLOCK
-import org.hyperledger.network.Rejection
+import akka.actor._
+import akka.pattern.{ ask, pipe }
+import akka.util.Timeout
+import org.hyperledger.common.{ Block, Header }
+import org.hyperledger.pbft.BlockHandler.{ ConsensusTimeout, Start, Stop }
+import org.hyperledger.pbft.Consensus.StartConsensus
 import org.hyperledger.pbft.PbftHandler._
-import org.hyperledger.pbft.PbftMiner.{StopMining, StartMining}
-import scodec.Attempt
+import org.hyperledger.pbft.PbftMiner.{ StartMining, StopMining }
+import org.hyperledger.pbft.RecoveryActor.NewHeaders
+import org.hyperledger.pbft.ViewChangeHandler.StoreTimeout
 
-import scala.concurrent.Future
-import scala.concurrent.duration.FiniteDuration
 import scala.util.{ Failure, Success }
 
 object PbftHandler {
+
   def props(broadcaster: ActorRef, miner: ActorRef) = Props(new PbftHandler(broadcaster, miner))
 
   sealed trait PbftHandlerState
   case object Normal extends PbftHandlerState
   case object ViewChangeOngoing extends PbftHandlerState
 
-  case class PbftHandlerData(activeConsensus: Map[BID, ActorRef],
-    activeViewChanges: Map[Int, ActorRef],
-    currentViewSeq: Int,
-    pendingViewChanges: List[ViewChange]) {
-
-    def getOrCreateConsensusWorker(id: BID, f: Int, parent: Actor): (Map[BID, ActorRef], ActorRef) = {
-      activeConsensus.get(id) match {
-        case Some(worker) => (activeConsensus, worker)
-        case None =>
-          val worker = parent.context.actorOf(Consensus.props(f, id, parent.self))
-          (activeConsensus.updated(id, worker), worker)
-      }
-    }
-
-    def getOrCreateViewChangeWorker(viewSeq: Int, f: Int, parent: Actor): (Map[Int, ActorRef], ActorRef) = {
-      activeViewChanges.get(viewSeq) match {
-        case Some(worker) => (activeViewChanges, worker)
-        case None =>
-          val worker = parent.context.actorOf(ViewChangeWorker.props(f, viewSeq, parent.self), s"pbft-viewchange-$viewSeq")
-          (activeViewChanges.updated(viewSeq, worker), worker)
-      }
-    }
-
-  }
+  case class PbftHandlerData(currentViewSeq: Int)
 
   sealed trait PbftHandlerMessage
-  case class SendPrepare(viewSeq: Int, blockHeader: Header) extends PbftHandlerMessage
-  case class SendCommit(viewSeq: Int, blockHeader: Header) extends PbftHandlerMessage
-  case class SendNewView(viewSeq: Int, viewChanges: List[ViewChange], blockHeader: Header, commits: List[Commit]) extends PbftHandlerMessage
-  case class Store(block: Block, commits: List[Commit]) extends PbftHandlerMessage
-  case class ConsensusTimeout() extends PbftHandlerMessage
-  case class Bye(id: BID) extends PbftHandlerMessage
-  case class ViewChangeBye(viewSeq: Int) extends PbftHandlerMessage
-  case class RecoveredToTop(viewSeq: Int, newViewSender: ActorRef) extends PbftHandlerMessage
-  case class NoNewView(duration: FiniteDuration) extends PbftHandlerMessage
+  case class BroadcastPrepare(blockHeader: Header) extends PbftHandlerMessage
+  case class BroadcastCommit(blockHeader: Header) extends PbftHandlerMessage
+  case class BroadcastViewChange(viewSeq: Int) extends PbftHandlerMessage
+  case class BroadcastNewView(viewSeq: Int, viewChanges: List[ViewChange], blockHeader: Header, commits: List[Commit]) extends PbftHandlerMessage
+  case class BroadcastGetHeaders() extends PbftHandlerMessage
   case class BlockMined(block: Block) extends PbftHandlerMessage
-  case class ConsensusAction(id: BID, m: Any) extends PbftHandlerMessage
-  case class StartConsensus(block: Block) extends PbftHandlerMessage
+  case class UpdateViewSeq(viewSeq: Int) extends PbftHandlerMessage
+  case class NewViewAccepted(viewSeq: Int) extends PbftHandlerMessage
+  case class ViewChangeLimitReached() extends PbftHandlerMessage
+
+  val emptyResponse = List.empty[PbftMessage]
 
 }
 
-class PbftHandler(broadcaster: ActorRef, miner: ActorRef)
-  extends LoggingFSM[PbftHandlerState, PbftHandlerData] {
+class PbftHandler(broadcaster: ActorRef, miner: ActorRef) extends LoggingFSM[PbftHandlerState, PbftHandlerData] {
 
-  import SignatureValidator._
   import context.dispatcher
+
+  import scala.concurrent.duration._
+
+  implicit val timeout = Timeout(1 seconds)
 
   val extension = PbftExtension(context.system)
   val store = extension.blockStoreConn
   val settings = extension.settings
   val ourNodeId = settings.ourNodeId
-  val privateKey = settings.privateKey
+  val privateKey = settings.privateKey.get
   val numberOfNodes = settings.nodes.size
 
   val fRounded = roundUp((numberOfNodes - 1) / 3f)
@@ -92,61 +71,63 @@ class PbftHandler(broadcaster: ActorRef, miner: ActorRef)
   def enough(n: Int) = n > 2 * fRounded
   def primary(node: Int, view: Int) = view % numberOfNodes == node
 
-  if(primary(ourNodeId, 0))
-    miner ! StartMining()
+  val blockHandler = context.actorOf(BlockHandler.props(fRounded, self), "blockhandler")
+  val viewChangeHandler = context.actorOf(ViewChangeHandler.props(fRounded), "viewchangehandler")
 
-  startWith(Normal, PbftHandlerData(Map.empty, Map.empty, 0, List.empty))
+  if (primary(ourNodeId, 0)) startMining()
+
+  startWith(Normal, PbftHandlerData(0))
 
   when(Normal) {
-    receiveExternalMessage orElse
-      sendExternalMessage orElse
-      receiveInternalMessage orElse
-      viewChangeOngoing
+    normal orElse viewChangeOngoing
   }
 
   when(ViewChangeOngoing) {
     viewChangeOngoing
   }
 
-  def receiveExternalMessage: StateFunction = {
-    case Event(m @ PrePrepareMessage(PrePrepare(node, viewSeq, block, _)), data) if viewSeq == data.currentViewSeq =>
-      if (primary(node, data.currentViewSeq)) {
-        log.debug(s"Received PrePrepare from the primary ($node) viewSeq: $viewSeq")
-
-        val sdr = sender()
-
-        store.validateBlock(block).onComplete {
-          case Success(true) =>
-            consensusActionForNewBlock(block.getID, m.payload).onComplete { result =>
-              sendBackNothing(sdr)
+  def normal: StateFunction = {
+    case Event(PrePrepareMessage(m), data) =>
+      val sdr = sender()
+      store.hasBlock(m.block.getPreviousID).onComplete {
+        case Success(false) =>
+          log.debug(s"Unknown parent ${m.block.getPreviousID} in PrePrepare, recovery needed")
+          sdr ! List(extension.getHeadersMessage)
+        case Success(true) =>
+          if (m.viewSeq == data.currentViewSeq) {
+            if (primary(m.node, data.currentViewSeq)) {
+              ask(blockHandler, m) pipeTo sdr
+            } else {
+              log.debug(s"PrePrepare arrived from non-primary node ${m.node} in currentViewSeq ${data.currentViewSeq}")
+              sdr ! emptyResponse
             }
-          case Success(false) =>
-            sendBackReject(sdr, Rejection.invalidBlock("Block not accepted")(block.getID))
-          case Failure(t) =>
-            log.debug(s"Block not accepted: ${t.getMessage}")
-            sendBackReject(sdr, Rejection.invalidBlock("Block not accepted")(block.getID))
-        }
-
-      } else {
-        log.debug("PrePrepare not sent by primary.")
+          } else {
+            log.debug(s"PrePrepare with viewSeq ${m.viewSeq} not in currentViewSeq ${data.currentViewSeq}")
+            sdr ! emptyResponse
+          }
+        case Failure(t) =>
+          log.debug(s"Error when checking parent stored state: ${t.getMessage}")
+          sdr ! emptyResponse
       }
-
-      stay()
-
+      stay
 
     case Event(PrepareMessage(m), data) if m.viewSeq == data.currentViewSeq =>
-      val sdr = sender()
-      consensusActionForNewBlock(m.blockHeader.getID, m).onComplete { result =>
-        sendBackNothing(sdr)
+      if (m.viewSeq == data.currentViewSeq) {
+        ask(blockHandler, m) pipeTo sender
+      } else {
+        log.debug(s"Prepare with viewSeq ${m.viewSeq} not in currentViewSeq ${data.currentViewSeq}")
+        sender ! emptyResponse
       }
-      stay()
+      stay
 
     case Event(CommitMessage(m), data) if m.viewSeq == data.currentViewSeq =>
-      val sdr = sender()
-      consensusActionForNewBlock(m.blockHeader.getID, m).onComplete { result =>
-        sendBackNothing(sdr)
+      if (m.viewSeq == data.currentViewSeq) {
+        ask(blockHandler, m) pipeTo sender
+      } else {
+        log.debug(s"Commit with viewSeq ${m.viewSeq} not in currentViewSeq ${data.currentViewSeq}")
+        sender ! emptyResponse
       }
-      stay()
+      stay
 
     case Event(BlockMined(block), data) =>
       if (primary(ourNodeId, data.currentViewSeq)) {
@@ -154,237 +135,120 @@ class PbftHandler(broadcaster: ActorRef, miner: ActorRef)
           err => log.error(s"Could not sign PrePrepare: ${err.message}"),
           signed => {
             broadcaster ! PrePrepareMessage(signed)
-            consensusActionForNewBlock(block.getID, StartConsensus(block))
-          }
-        )
-      } else {
-        broadcaster ! InvMessage(List(InventoryVector(MSG_BLOCK, block.getID)))
+            blockHandler ! StartConsensus(block)
+          })
       }
-      stay()
+      stay
 
-    case Event(BlockMessage(block), data) =>
-      log.debug(s"Received block ${block.getID}")
-      if (primary(ourNodeId, data.currentViewSeq)) {
-        val sdr = sender()
-
-        store.validateBlock(block).onComplete {
-          case Success(true) =>
-            PrePrepare(ourNodeId, data.currentViewSeq, block).sign(privateKey).fold(
-              err => {
-                log.error(s"Could not sign PrePrepare: ${err.message}")
-                sendBackNothing(sdr)
-              },
-              signed => {
-                broadcaster ! PrePrepareMessage(signed)
-                consensusActionForNewBlock(block.getID, StartConsensus(block)).onComplete { result =>
-                  sendBackNothing(sdr)
-                }
-              })
-          case Success(false) =>
-            sendBackReject(sdr, Rejection.invalidBlock("Block not accepted")(block.getID))
-          case Failure(t) =>
-            log.debug(s"Error during block validation: ${t.getMessage}")
-            sendBackNothing(sdr)
-        }
-
-      }
-      stay()
-  }
-
-  def sendExternalMessage: StateFunction = {
-    case Event(SendPrepare(viewSeq, blockHeader), data) =>
-      Prepare(ourNodeId, viewSeq, blockHeader).sign(privateKey).fold(
+    case Event(BroadcastPrepare(blockHeader), data) =>
+      Prepare(ourNodeId, data.currentViewSeq, blockHeader).sign(privateKey).fold(
         err => log.error(s"Could not sign Prepare: ${err.message}"),
         signed => {
           broadcaster ! PrepareMessage(signed)
-          data.activeConsensus(blockHeader.getID) ! signed
+          blockHandler ? signed
         })
-      stay()
+      stay
 
-    case Event(SendCommit(viewSeq, blockHeader), data) =>
-      Commit(ourNodeId, viewSeq, blockHeader).sign(privateKey).fold(
+    case Event(BroadcastCommit(blockHeader), data) =>
+      Commit(ourNodeId, data.currentViewSeq, blockHeader).sign(privateKey).fold(
         err => log.error(s"Could not sign commit: ${err.message}"),
         signed => {
           broadcaster ! CommitMessage(signed)
-          data.activeConsensus(blockHeader.getID) ! signed
+          blockHandler ? signed
         })
-      stay()
-  }
-
-  def receiveInternalMessage: StateFunction = {
-    case Event(ConsensusAction(id, m), data) =>
-      val (workers, worker) = data.getOrCreateConsensusWorker(id, fRounded, this)
-      worker ! m
-      stay() using data.copy(activeConsensus = workers)
-
-    case Event(Store(block, commits), data) =>
-      store.store(block, commits).onComplete {
-        case Success(true)  =>
-          cancelTimer("no-store")
-          setTimer("no-store", ConsensusTimeout(), settings.protocolTimeout)
-        case Success(false) => log.debug("Failed to store commits")
-        case Failure(err)   => log.debug(s"Failed to store block or commits: ${err.getMessage}")
-      }
-      stay()
+      stay
 
     case Event(ConsensusTimeout(), data) =>
-      data.activeConsensus.values.foreach(context.stop)
-      val currentViewSeq = data.currentViewSeq + 1
-      createSignedViewChange(currentViewSeq) match {
-        case Attempt.Successful(message) =>
-          broadcaster ! ViewChangeMessage(message)
-          if (primary(ourNodeId, currentViewSeq)) {
-            val (workers, worker) = data.getOrCreateViewChangeWorker(currentViewSeq, fRounded, this)
-            worker ! message
-            goto(ViewChangeOngoing) using PbftHandlerData(Map.empty, workers, currentViewSeq, data.pendingViewChanges)
-          } else {
-            goto(ViewChangeOngoing) using data.copy(activeConsensus = Map.empty, currentViewSeq = currentViewSeq)
-          }
-        case Attempt.Failure(err) =>
-          log.debug(s"Could not create ViewChange: ${err.message}")
-          goto(ViewChangeOngoing) using data.copy(activeConsensus = Map.empty, currentViewSeq = currentViewSeq)
+      viewChangeHandler ! StoreTimeout(data.currentViewSeq)
+      goto(ViewChangeOngoing)
+
+    case Event(UpdateViewSeq(viewSeq), data) =>
+      if (viewSeq > data.currentViewSeq) {
+        log.debug(s"ViewSeq updated to $viewSeq")
+        switchMining(viewSeq)
+        stay using data.copy(currentViewSeq = viewSeq)
+      } else {
+        stay
       }
   }
 
   def viewChangeOngoing: StateFunction = {
-    case Event(ViewChangeMessage(m), data) if primary(ourNodeId, m.viewSeq) =>
-      val pendingViewChanges = data.pendingViewChanges :+ m
-      val (workers, worker) = data.getOrCreateViewChangeWorker(m.viewSeq, fRounded, this)
-      worker ! m
-      if (stateName == Normal && data.pendingViewChanges.size > fRounded) {
-        val viewSeqs = pendingViewChanges.map(_.viewSeq)
-        val currentViewSeq = data.currentViewSeq + 1
-        val minViewSeq = (viewSeqs :+ currentViewSeq).min
-        createSignedViewChange(minViewSeq).fold(
-          err => log.debug(s"Failed to create ViewChange: ${err.message}"),
-          m => broadcaster ! ViewChangeMessage(m))
-        sendBackNothing(sender())
-        goto(ViewChangeOngoing) using
-          data.copy(activeViewChanges = workers, currentViewSeq = minViewSeq, pendingViewChanges = pendingViewChanges)
+    case Event(ViewChangeMessage(m), data) =>
+      viewChangeHandler ! m
+      sender ! emptyResponse
+      stay
+
+    case Event(NewViewMessage(m: NewView), data) =>
+      viewChangeHandler ! m
+      sender ! emptyResponse
+      stay
+
+    case Event(NewViewAccepted(viewSeq), data) =>
+      goto(Normal) using data.copy(currentViewSeq = viewSeq)
+
+    case Event(ViewChangeLimitReached(), data) =>
+      if (stateName == Normal) {
+        blockHandler ! Stop()
+        goto(ViewChangeOngoing)
       } else {
-        sendBackNothing(sender())
-        stay() using data.copy(activeViewChanges = workers, pendingViewChanges = pendingViewChanges)
+        stay
       }
-    // TODO should ask for the block if unknown
 
-    case Event(NewViewMessage(NewView(_, viewSeq, viewChanges, blockHeader, commits, _)), data) =>
-      val (badVC, goodVC) = split(validateViewChanges(viewChanges).run(settings))
-      val sdr = sender()
+    case Event(BroadcastGetHeaders(), data) =>
+      broadcaster ! extension.getHeadersMessage
+      stay
 
-      badVC.foreach { item => log.debug(s"Message ${item._2} failed validation: ${item._1}") }
+    case Event(m: NewHeaders, data) =>
+      viewChangeHandler ! m
+      stay
 
-      if (enough(goodVC.size)) {
-        val (badC, goodC) = split(validateCommits(commits).run(settings))
-
-        badC.foreach { item => log.debug(s"Message ${item._2} failed validation: ${item._1}") }
-
-        if (enough(goodC.size)) {
-          def success(): Unit = {
-            log.debug("Going back to normal")
-            self ! RecoveredToTop(viewSeq, sdr)
-            switchMining(viewSeq)
-          }
-          store.recoverTo(blockHeader.getID, broadcaster, success).onComplete {
-            case Success(msg)   =>log.debug(s"Recovery finished: $msg")
-            case Failure(err) =>
-              log.debug(s"Failed to start recovery: ${err.getMessage}")
-              sendBackNothing(sdr)
-          }
-        } else {
-          log.debug("Discarded NewView, not enough valid Commit signature")
-          sendBackNothing(sdr)
-        }
-      } else {
-        log.debug("Discarded NewView, not enough valid ViewChange signature")
-        sendBackNothing(sdr)
-      }
-      stay() using data.copy(pendingViewChanges = data.pendingViewChanges.filter(_.viewSeq != viewSeq))
-
-    case Event(RecoveredToTop(viewSeq, sdr), data) =>
-      data.activeConsensus.values.foreach(context.stop)
-      sendBackNothing(sdr)
-      goto(Normal) using data.copy(currentViewSeq = viewSeq, activeConsensus = Map.empty)
-
-    case Event(SendNewView(viewSeq, viewChanges, blockHeader, commits), data) =>
+    case Event(BroadcastNewView(viewSeq, viewChanges, blockHeader, commits), data) =>
       NewView(ourNodeId, viewSeq, viewChanges, blockHeader, commits).sign(privateKey).fold(
         err => log.error(s"Could not sign NewView: ${err.message}"),
-        signed => {
-          broadcaster ! NewViewMessage(signed)
-          switchMining(viewSeq)
+        signed => broadcaster ! NewViewMessage(signed))
+      goto(Normal) using data.copy(currentViewSeq = viewSeq)
+
+    case Event(BroadcastViewChange(viewSeq), data) =>
+      val highest = store.getHighestBlock
+      store.getCommits(highest.getID).flatMap { commits =>
+        ViewChange(ourNodeId, viewSeq, highest.getHeader, commits).sign(privateKey)
+      }.fold(
+        err => log.debug(s"Failed to create ViewChange: ${err.message}"),
+        msg => {
+          broadcaster ! ViewChangeMessage(msg)
+          viewChangeHandler ! msg
         })
-      data.activeConsensus.values.foreach(context.stop)
-      goto(Normal) using data.copy(currentViewSeq = viewSeq,
-        activeConsensus = Map.empty,
-        pendingViewChanges = data.pendingViewChanges.filter(_.viewSeq != viewSeq))
-
-    case Event(NoNewView(duration), data) =>
-      val viewSeq = data.currentViewSeq + 1
-      createSignedViewChange(viewSeq).fold(
-        err => log.debug(s"Could not create ViewChange: ${err.message}"),
-        message => broadcaster ! ViewChangeMessage(message))
-      val newDuration = duration * 2
-      setTimer("no new view", NoNewView(newDuration), newDuration)
-      stay() using data.copy(currentViewSeq = viewSeq)
-
+      stay
   }
 
   whenUnhandled {
-    case Event(Bye(id), data) =>
-      data.activeConsensus.get(id).foreach(context.stop)
-      stay() using data.copy(activeConsensus = data.activeConsensus - id)
-
-    case Event(ViewChangeBye(viewSeq), data) =>
-      data.activeViewChanges.get(viewSeq).foreach(context.stop)
-      stay() using data.copy(activeViewChanges = data.activeViewChanges - viewSeq)
-
-    case Event(m: GetBlocksMessage, data) =>
-      broadcaster ! m
-      stay()
-
     case Event(m: PbftMessage, data) =>
-      sendBackNothing(sender())
-      stay()
+      log.debug(s"Discard message: $m".take(160))
+      sender ! emptyResponse
+      stay
   }
 
   onTransition {
     case _ -> ViewChangeOngoing =>
-      val duration = settings.protocolTimeout
-      setTimer("no new view", NoNewView(duration), duration)
+      stopMining()
 
     case ViewChangeOngoing -> _ =>
-      cancelTimer("no new view")
+      blockHandler ! Start()
+      switchMining(nextStateData.currentViewSeq)
   }
 
   def switchMining(viewSeq: Int) =
-    if (primary(ourNodeId, viewSeq)) {
-      log.debug("Start mining")
-      miner ! StartMining()
-    }
-    else {
-      log.debug("Stop mining")
-      miner ! StopMining()
-    }
+    if (primary(ourNodeId, viewSeq)) startMining()
+    else stopMining()
 
-  def consensusActionForNewBlock(id: BID, m: Any) =
-    store.hasBlock(id).flatMap {
-      case true =>
-        log.debug("Block already accepted")
-        Future.successful(())
-      case false =>
-        self ! ConsensusAction(id, m)
-        Future.successful(())
-    }
+  def startMining() = {
+    log.debug("Start mining")
+    miner ! StartMining()
+  }
 
-  def sendBackNothing(sdr: ActorRef) =
-    sdr ! List.empty[PbftMessage]
-
-  def sendBackReject(sdr: ActorRef, reject: Rejection) =
-    sdr ! List(RejectMessage(reject))
-
-  def createSignedViewChange(viewSeq: Int): Attempt[ViewChange] = {
-    val highest = store.getHighestBlock
-    store.getCommits(highest.getID)
-      .flatMap { commits => ViewChange(ourNodeId, viewSeq, highest.getHeader, commits).sign(privateKey) }
+  def stopMining() = {
+    log.debug("Stop mining")
+    miner ! StopMining()
   }
 
 }

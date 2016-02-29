@@ -14,13 +14,14 @@
 package org.hyperledger.account;
 
 import org.hyperledger.common.Address;
-import org.hyperledger.common.HyperLedgerException;
 import org.hyperledger.common.Coin;
+import org.hyperledger.common.HyperLedgerException;
 import org.hyperledger.common.TransactionOutput;
 
 import java.util.Comparator;
 import java.util.List;
 
+/** Create transaction proposals.  The order of outputs is preserved. */
 public interface TransactionFactory {
 
     public static final long DUST_LIMIT = 2730;

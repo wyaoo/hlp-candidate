@@ -41,7 +41,8 @@ case class TxMessage(payload: Transaction) extends PbftMessage
 case class BlockMessage(payload: Block) extends PbftMessage
 case class InvMessage(payload: List[InventoryVector]) extends PbftMessage
 case class GetDataMessage(payload: List[InventoryVector]) extends PbftMessage
-case class GetBlocksMessage(payload: BlockDataRequest) extends PbftMessage
+case class GetHeadersMessage(payload: BlockDataRequest) extends PbftMessage
+case class HeadersMessage(payload: List[HeaderAndCommit]) extends PbftMessage
 
 object PbftMessage {
   implicit val discriminated: Discriminated[PbftMessage, String] = Discriminated(cmdCodec)
@@ -90,8 +91,11 @@ object PbftMessage {
   implicit val getDataD = discriminator[GetDataMessage]("getdata")
   implicit val getDataC: Codec[GetDataMessage] = ("payload" | C.varIntSizeSeq(InventoryVector.codec)).as[GetDataMessage]
 
-  implicit val getBlocksD = discriminator[GetBlocksMessage]("getblocks")
-  implicit val getBlocksC: Codec[GetBlocksMessage] = BlockDataRequest.codec.hlist.as[GetBlocksMessage]
+  implicit val getHeadersD = discriminator[GetHeadersMessage]("getheaders")
+  implicit val getHeadersC: Codec[GetHeadersMessage] = BlockDataRequest.codec.hlist.as[GetHeadersMessage]
+
+  implicit val headersD = discriminator[HeadersMessage](HeaderAndCommit.command)
+  implicit val headersC: Codec[HeadersMessage] = ("payload" | C.varIntSizeSeq(HeaderAndCommit.codec)).as[HeadersMessage]
 
   val codec: Codec[PbftMessage] = Codec.coproduct[PbftMessage]
     .framing(PayloadFrameCodec.framing)
@@ -247,3 +251,14 @@ case class NewView(
   val command = NewView.command
   def withSignature(sig: ByteVector) = copy(signature = sig)
 }
+
+object HeaderAndCommit {
+  val command = "headers"
+
+  implicit val codec = {
+    ("header" | headerCodec) ::
+      ("commits" | C.varIntSizeSeq(Commit.codec))
+  }.as[HeaderAndCommit]
+}
+
+case class HeaderAndCommit(header: Header, commits: List[Commit])

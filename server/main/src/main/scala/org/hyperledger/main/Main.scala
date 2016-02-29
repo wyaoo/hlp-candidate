@@ -36,7 +36,6 @@ object Main extends App {
   def createAndStartServer(system: ActorSystem) = {
     val hyperLedger = HyperLedgerExtension(system)
     system.log.info("Starting HyperLedger core services")
-    hyperLedger.initialize()
 
     val coreAssembly = hyperLedger.coreAssembly
     val jmsConnector =

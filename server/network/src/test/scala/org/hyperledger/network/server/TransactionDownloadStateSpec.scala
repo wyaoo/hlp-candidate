@@ -67,7 +67,7 @@ class TransactionDownloadStateSpec extends FunSpec with Matchers {
           List(hash1, hash2, hash3).map(s1.isKnown).forall(identity) shouldBe true
         }
         it("should be still empty if a transaction stored by others") {
-          s.transactionStored(hash1) shouldBe (s, Noop)
+          s.transactionStored(hash1) shouldBe ((s, Noop))
         }
       }
 

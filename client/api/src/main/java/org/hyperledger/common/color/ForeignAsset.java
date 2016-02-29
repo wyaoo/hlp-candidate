@@ -76,19 +76,6 @@ public class ForeignAsset implements Color {
     }
 
     @Override
-    public int compareTo(Color o) {
-        if (o.isToken())
-            return -1;
-        if (o.isNative())
-            return -1;
-        if (!(o instanceof ForeignAsset)) {
-            throw new IllegalArgumentException("cannot compare to new Asset subclass");
-        }
-
-        return assetAddress.hashCode() - ((ForeignAsset) o).assetAddress.hashCode();  // bitcoin last
-    }
-
-    @Override
     public String toString() {
         return "OutputColor{" +
                 "id=" + assetAddress +

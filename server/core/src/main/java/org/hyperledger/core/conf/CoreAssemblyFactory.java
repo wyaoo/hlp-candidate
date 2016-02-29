@@ -82,8 +82,10 @@ public class CoreAssemblyFactory {
     }
 
     public static void reset() {
-        assembly.stop();
-        assembly = null;
+        if (assembly != null) {
+            assembly.stop();
+            assembly = null;
+        }
         settings = null;
     }
 

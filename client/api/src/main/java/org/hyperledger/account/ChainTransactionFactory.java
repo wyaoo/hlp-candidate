@@ -21,7 +21,9 @@ import org.hyperledger.common.Transaction;
  * <p>
  * <p>
  * Note that proposal can only be used if it is fully signed or if TID does not depend
- * on signature (not yet available on Bitcoin)
+ * on signature (not yet available on Bitcoin).
+ * <p>
+ * Output order is preserved.
  */
 public class ChainTransactionFactory extends BaseTransactionFactory {
     public ChainTransactionFactory(AddressChain chain, Transaction transaction) {

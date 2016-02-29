@@ -23,8 +23,8 @@ import org.hyperledger.pbft.PbftSettings.NodeConfig
 import scalaz._
 import Scalaz._
 
-object ConnectionManagement2 {
-  def empty = new ConnectionManagement2(Map.empty, Map.empty)
+object ConnectionManagement {
+  def empty = new ConnectionManagement(Map.empty, Map.empty)
 
   sealed trait Connection {
     def peer: ActorRef
@@ -44,12 +44,12 @@ object ConnectionManagement2 {
   case object AlreadyConnected extends ConnectionError
   case object UnknownConnection extends ConnectionError
 }
-case class ConnectionManagement2(
-  pendingConnections: Map[InetSocketAddress, ConnectionManagement2.PendingConnection],
-  activeConnections: Map[InetSocketAddress, ConnectionManagement2.Connection]) {
-  import ConnectionManagement2._
+case class ConnectionManagement(
+  pendingConnections: Map[InetSocketAddress, ConnectionManagement.PendingConnection],
+  activeConnections: Map[InetSocketAddress, ConnectionManagement.Connection]) {
+  import ConnectionManagement._
 
-  def connected(peer: ActorRef, remoteAddress: InetSocketAddress): ConnectionError \/ ConnectionManagement2 =
+  def connected(peer: ActorRef, remoteAddress: InetSocketAddress): ConnectionError \/ ConnectionManagement =
     if (pendingConnections.contains(remoteAddress))
       \/.left(AlreadyConnected)
     else
@@ -62,7 +62,7 @@ case class ConnectionManagement2(
   def handshakeComplete(settings: PbftSettings,
     peer: ActorRef,
     remoteAddress: InetSocketAddress,
-    version: Version): (ConnectionManagement2, Connection) = {
+    version: Version): (ConnectionManagement, Connection) = {
 
     val conn = settings.otherNodes.find(_.address == version.addrFrom)
       .map(n => ReplicaConnection(remoteAddress, version, n.publicKey, peer))
@@ -75,30 +75,3 @@ case class ConnectionManagement2(
     (updated, conn)
   }
 }
-
-object ConnectionManagement {
-  def empty = ConnectionManagement(List.empty)
-  case class Connection(address: InetSocketAddress, publicKey: PublicKey)
-
-}
-
-case class ConnectionManagement(activeConnections: List[ConnectionManagement.Connection]) {
-  import ConnectionManagement._
-
-  lazy val keySet = activeConnections.map(_.publicKey).toSet
-
-  def newConnection(address: InetSocketAddress, publicKey: PublicKey) = Reader[PbftSettings, String \/ ConnectionManagement] { settings =>
-    if (activeConnections.exists(_.publicKey == publicKey))
-      "Already connected".left
-    else if (settings.otherNodes.exists(_.publicKey == publicKey))
-      copy(activeConnections = activeConnections :+ Connection(address, publicKey)).right
-    else
-      "Unauthorized node".left
-  }
-
-  def disconnect(publicKey: PublicKey) = copy(activeConnections = activeConnections.filterNot(_.publicKey == publicKey))
-
-  def missingConnections = Reader[PbftSettings, List[NodeConfig]](_.otherNodes.filterNot(node => keySet(node.publicKey)))
-
-}
-

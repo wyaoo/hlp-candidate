@@ -15,7 +15,7 @@ package org.hyperledger.pbft
 
 import org.hyperledger.common.PublicKey
 import scodec.bits.BitVector
-import scodec.{Attempt, Err}
+import scodec.{ Attempt, Err }
 
 import scalaz.Scalaz._
 import scalaz._
@@ -24,16 +24,18 @@ object SignatureValidator {
 
   type MessageOrErr[M] = \/[(Err, M), M]
 
+  // format: OFF
   def valid[M](getHash: M => Attempt[BitVector],
                getSig: M => Array[Byte])
-              (m: M, k: PublicKey): MessageOrErr[M] = {
-    getHash(m) match {
-      case Attempt.Failure(err)     => \/.left((err, m))
-      case Attempt.Successful(hash) => k.verify(hash.toByteArray, getSig(m)) match {
+              (m: M, k: PublicKey): MessageOrErr[M] = getHash(m) match {
+    // format: ON
+    case Attempt.Failure(err) =>
+      \/.left((err, m))
+    case Attempt.Successful(hash) =>
+      k.verify(hash.toByteArray, getSig(m)) match {
         case true  => \/.right(m)
         case false => \/.left((Err("Incorrect signature"), m))
       }
-    }
   }
 
   def pkViewChange(settings: PbftSettings, m: ViewChange): PublicKey = settings.nodes(m.node).publicKey
@@ -44,9 +46,11 @@ object SignatureValidator {
   def getCommitHash(m: Commit): Attempt[BitVector] = m.getHash
   def getCommitSig(m: Commit): Array[Byte] = m.signature.toArray
 
+  // format: OFF
   def validMessages[M](messages: List[M],
                        validator: (M, PublicKey) => MessageOrErr[M],
                        pk: (PbftSettings, M) => PublicKey): Reader[PbftSettings, List[MessageOrErr[M]]] = Reader(settings => {
+    // format: ON
     messages.map { m => validator(m, pk(settings, m)) }
   })
 

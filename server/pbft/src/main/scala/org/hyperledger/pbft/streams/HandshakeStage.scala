@@ -127,6 +127,7 @@ class HandshakeStage(ourVersion: Version, versionP: HandshakeStage.VersionP, out
         pull(protoIn)
       }
 
+      setHandler(protoIn, totallyIgnorantInput)
       setHandler(appOut, new OutHandler {
         override def onPull(): Unit = if (!hasBeenPulled(protoIn)) tryPull(protoIn)
         override def onDownstreamFinish(): Unit = ()
@@ -138,7 +139,6 @@ class HandshakeStage(ourVersion: Version, versionP: HandshakeStage.VersionP, out
       })
 
       setHandler(protoOut, ignoreTerminateOutput)
-      setHandler(protoIn, eagerTerminateInput)
     }
 
     (logic, versionPromise.future)

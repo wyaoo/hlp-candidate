@@ -32,7 +32,7 @@ class Blocks extends FeatureSpec with GivenWhenThen {
 
       val threadCount = 20
       val iterations = 100
-      val timeoutMillis = 120000
+      val timeoutMillis = 120000L
       When(s"requesting zero-hash blocks in $threadCount threads times $iterations iterations with ${timeoutMillis / 1000} seconds timeout")
       val stats = runner.connectAndExecute(threadCount, iterations, timeoutMillis, sendGetZeroHashBlocksMessage)
 

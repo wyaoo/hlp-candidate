@@ -11,16 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.hyperledger.network
 
-import akka.stream._
-import Messages.{DataMessage, BlockchainMessage}
+import scala.util.control.NoStackTrace
 
-package object flows {
+class BlockchainException(msg: String) extends RuntimeException(msg) with NoStackTrace
+abstract class InvalidVersionException extends BlockchainException("invalid version")
+case object InvalidVersionException extends InvalidVersionException
 
-  type MessageFlowShape[M <: BlockchainMessage] = FlowShape[M, CtrlOrMessage]
-  type MessageFlow[M <: BlockchainMessage] = Graph[MessageFlowShape[M], Unit]
-
-  type CtrlOrDataMessage = Either[ControlMessage, DataMessage]
-
-}
+case class RejectionException(msg: String, rejection: Rejection) extends BlockchainException(msg)

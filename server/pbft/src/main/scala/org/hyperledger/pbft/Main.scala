@@ -34,7 +34,6 @@ object Main extends App {
   implicit val actorSystem: ActorSystem = ActorSystem("hyperledger-pbft", config)
 
   val ext = PbftExtension(actorSystem)
-  ext.initialize()
   val server = actorSystem.actorOf(PbftServer.props(ext.settings.bindAddress))
 
   actorSystem.registerOnTermination {

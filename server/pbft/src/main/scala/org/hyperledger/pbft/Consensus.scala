@@ -15,24 +15,45 @@ package org.hyperledger.pbft
 
 import akka.actor._
 import org.hyperledger.common.{ BID, Block }
+import org.hyperledger.pbft.BlockHandler.{ Store, SendCommit, SendPrepare }
 import org.hyperledger.pbft.Consensus._
+
+object Consensus {
+  sealed trait ConsensusState
+  case object WaitForPrePrepare extends ConsensusState
+  case object WaitForPrepare extends ConsensusState
+  case object WaitForCommit extends ConsensusState
+  case object Done extends ConsensusState
+
+  // format: OFF
+  case class ConsensusData(block: Option[Block],
+                           prepares: Set[Prepare],
+                           commits: Set[Commit])
+  // format: ON
+
+  sealed trait ConsensusMessage
+  case class Timeout() extends ConsensusMessage
+  case class StartConsensus(block: Block) extends ConsensusMessage
+  case class Stored() extends ConsensusMessage
+  case class ConsensusBye(id: BID) extends ConsensusMessage
+
+  def props(f: Int, blockId: BID, parent: ActorRef) = Props(new Consensus(f, blockId, parent))
+}
 
 class Consensus(f: Int, blockId: BID, parent: ActorRef) extends LoggingFSM[ConsensusState, ConsensusData] {
 
-  import PbftHandler._
-
   val settings = PbftExtension(context.system).settings
+
+  setTimer("timeout", Timeout(), settings.protocolTimeout)
 
   startWith(WaitForPrePrepare, ConsensusData(None, Set.empty, Set.empty))
 
   when(WaitForPrePrepare) {
     case Event(PrePrepare(_, viewSeq, block, _), data) =>
-      parent ! SendPrepare(viewSeq, block.getHeader)
-      data.prepares.foreach { self ! _ }
-      goto(WaitForPrepare) using ConsensusData(Some(block), Set.empty, data.commits)
+      sender ! SendPrepare(block.getHeader)
+      goto(WaitForPrepare) using data.copy(block = Some(block))
 
     case Event(StartConsensus(block), data) =>
-      data.prepares.foreach { self ! _ }
       goto(WaitForPrepare) using data.copy(block = Some(block))
 
     case Event(m: Prepare, data) =>
@@ -46,9 +67,8 @@ class Consensus(f: Int, blockId: BID, parent: ActorRef) extends LoggingFSM[Conse
     case Event(m: Prepare, data) =>
       val prepares = data.prepares + m
       if (prepares.size >= 2 * f) {
-        parent ! SendCommit(m.viewSeq, data.block.get.getHeader)
-        data.commits.foreach { self ! _ }
-        goto(WaitForCommit) using ConsensusData(data.block, prepares, Set.empty)
+        sender ! SendCommit(data.block.get.getHeader)
+        goto(WaitForCommit) using data.copy(prepares = prepares)
       } else {
         stay() using data.copy(prepares = prepares)
       }
@@ -61,45 +81,31 @@ class Consensus(f: Int, blockId: BID, parent: ActorRef) extends LoggingFSM[Conse
     case Event(m: Commit, data) =>
       val commits = data.commits + m
       if (commits.size > 2 * f) {
-        parent ! Store(data.block.get, commits.toList)
+        sender ! Store(data.block.get, commits.toList)
         goto(Done)
       } else {
         stay() using data.copy(commits = data.commits + m)
       }
+
+    case Event(m: Prepare, _) =>
+      log.debug("Prepare arrived after enough received")
+      stay()
   }
 
   when(Done) {
-    case x =>
-      log.debug(s"arrived after done: $x")
+    case Event(Stored(), data) =>
+      parent ! ConsensusBye(blockId)
+      stop()
+
+    case Event(x @ (_: Prepare | _: Commit), data) =>
+      log.debug(s"Arrived after done: $x")
       stay()
   }
 
   whenUnhandled {
-    case Event(PbftTimeout(), _) =>
-      parent ! ConsensusTimeout()
-      goto(Done)
+    case Event(Timeout(), _) =>
+      parent ! ConsensusBye(blockId)
+      stop()
   }
 
-  onTransition {
-    case WaitForPrePrepare -> _ =>
-      setTimer("timeout", PbftTimeout(), settings.protocolTimeout)
-
-    case _ -> Done =>
-      parent ! Bye(blockId)
-  }
-
-}
-
-object Consensus {
-  sealed trait ConsensusState
-  case object WaitForPrePrepare extends ConsensusState
-  case object WaitForPrepare extends ConsensusState
-  case object WaitForCommit extends ConsensusState
-  case object Done extends ConsensusState
-
-  case class ConsensusData(block: Option[Block], prepares: Set[Prepare], commits: Set[Commit])
-
-  sealed case class PbftTimeout()
-
-  def props(f: Int, blockId: BID, parent: ActorRef): Props = Props(new Consensus(f, blockId, parent))
 }
