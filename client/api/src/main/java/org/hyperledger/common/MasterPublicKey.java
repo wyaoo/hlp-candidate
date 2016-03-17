@@ -34,7 +34,7 @@ import java.security.NoSuchProviderException;
 /**
  * Public Key Generator following BIP32 @Link https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
  */
-public class MasterPublicKey implements MasterKey {
+public class MasterPublicKey implements MasterKey<PublicKey> {
     private static final X9ECParameters curve = SECNamedCurves.getByName("secp256k1");
 
     private final PublicKey master;

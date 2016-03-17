@@ -66,12 +66,14 @@
         <junit.version>4.12</junit.version>
         <scijava.version>2.1.1</scijava.version>
         <jna.version>4.2.1</jna.version>
+        <commons.math3.version>3.6</commons.math3.version>
     </properties>
 
     <modules>
         <module>client</module>
         <module>server</module>
         <module>examples</module>
+        <module>accountimport</module>
     </modules>
 
     <dependencyManagement>
@@ -313,6 +315,11 @@
                 <artifactId>jna</artifactId>
                 <version>${jna.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-math3</artifactId>
+                <version>${commons.math3.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -389,42 +396,42 @@
                 <artifactId>cobertura-maven-plugin</artifactId>
                 <version>2.7</version>
                 <configuration>
-                  <aggregate>true</aggregate>
-                  <outputDirectory>coverageReports</outputDirectory>
-                  <formats>
-                      <format>html</format>
-                      <format>xml</format>
-                  </formats>
-                  <instrumentation>
-                      <excludes>
-                        <!-- ignore java files that JavaNCSS can't parse -->
-                        <!-- these must be repeated in reporting section below -->
-                        <exclude>**/BCSAPIServer.java</exclude>
-                        <exclude>**/TestServer.java</exclude>
-                        <exclude>**/HyperLedgerBundle.java</exclude>
-                        <exclude>**/SignaturOperationCounter.java</exclude>
-                        <exclude>**/BitcoinPersistentBlocks.java</exclude>
-                        <exclude>**/UnitTestBitcoinValidatorFactory.java</exclude>
-                        <exclude>**/Mempool.java</exclude>
-                        <exclude>**/DefaultBlockStore.java</exclude>
-                        <exclude>**/CoreOutbox.java</exclude>
-                        <exclude>**/TransactionRepresentation.java</exclude>
-                        <exclude>**/BlockRepresentation.java</exclude>
-                        <exclude>**/SupernodeModule.java</exclude>
-                        <exclude>**/InMemoryConnector.java</exclude>
-                        <exclude>**/BCSAPIClient.java</exclude>
-                        <exclude>**/WireFormatter.java</exclude>
-                        <exclude>**/Transaction.java</exclude>
-                        <exclude>**/ScriptBuilder.java</exclude>
-                        <exclude>**/Block.java</exclude>
-                        <exclude>**/APITransaction.java</exclude>
-                        <exclude>**/APIBlock.java</exclude>
-                        <exclude>**/TransactionFactory.java</exclude>
-                        <exclude>**/MultiSigSigner.java</exclude>
-                        <exclude>**/MasterPublicChain.java</exclude>
-                        <exclude>**/MasterPrivateChain.java</exclude>
-                      </excludes>
-                  </instrumentation>
+                    <aggregate>true</aggregate>
+                    <outputDirectory>coverageReports</outputDirectory>
+                    <formats>
+                        <format>html</format>
+                        <format>xml</format>
+                    </formats>
+                    <instrumentation>
+                        <excludes>
+                            <!-- ignore java files that JavaNCSS can't parse -->
+                            <!-- these must be repeated in reporting section below -->
+                            <exclude>**/BCSAPIServer.java</exclude>
+                            <exclude>**/TestServer.java</exclude>
+                            <exclude>**/HyperLedgerBundle.java</exclude>
+                            <exclude>**/SignaturOperationCounter.java</exclude>
+                            <exclude>**/BitcoinPersistentBlocks.java</exclude>
+                            <exclude>**/UnitTestBitcoinValidatorFactory.java</exclude>
+                            <exclude>**/Mempool.java</exclude>
+                            <exclude>**/DefaultBlockStore.java</exclude>
+                            <exclude>**/CoreOutbox.java</exclude>
+                            <exclude>**/TransactionRepresentation.java</exclude>
+                            <exclude>**/BlockRepresentation.java</exclude>
+                            <exclude>**/SupernodeModule.java</exclude>
+                            <exclude>**/InMemoryConnector.java</exclude>
+                            <exclude>**/BCSAPIClient.java</exclude>
+                            <exclude>**/WireFormatter.java</exclude>
+                            <exclude>**/Transaction.java</exclude>
+                            <exclude>**/ScriptBuilder.java</exclude>
+                            <exclude>**/Block.java</exclude>
+                            <exclude>**/APITransaction.java</exclude>
+                            <exclude>**/APIBlock.java</exclude>
+                            <exclude>**/TransactionFactory.java</exclude>
+                            <exclude>**/MultiSigSigner.java</exclude>
+                            <exclude>**/MasterPublicChain.java</exclude>
+                            <exclude>**/MasterPrivateChain.java</exclude>
+                        </excludes>
+                    </instrumentation>
                 </configuration>
             </plugin>
             <plugin>
@@ -454,7 +461,7 @@
                 <artifactId>build-info-maven-plugin</artifactId>
                 <version>1.1</version>
                 <configuration>
-                    <filename>build-info-${project.name}.txt</filename>
+                    <filename>build-info-${project.name}.properties</filename>
                     <projectProperties>
                         <projectProperty>project.id</projectProperty>
                         <projectProperty>project.groupId</projectProperty>
@@ -500,7 +507,7 @@
                         </goals>
                         <configuration>
                             <outputFile>
-                                target/dependency-info-${project.name}.txt
+                                target/dependency-info-${project.name}.properties
                             </outputFile>
                         </configuration>
                     </execution>
@@ -511,8 +518,8 @@
             <resource>
                 <directory>target/</directory>
                 <includes>
-                    <include>build-info-*.txt</include>
-                    <include>dependency-info-*.txt</include>
+                    <include>build-info-*.properties</include>
+                    <include>dependency-info-*.properties</include>
                 </includes>
             </resource>
             <resource>
@@ -522,7 +529,7 @@
                 </includes>
             </resource>
         </resources>
-      </build>
+    </build>
 
 
     <reporting>
@@ -534,32 +541,32 @@
                 <configuration>
                     <instrumentation>
                         <excludes>
-                        <!-- ignore java files that JavaNCSS can't parse -->
-                        <!-- these must be repeated in plugin section above -->
-                        <exclude>**/BCSAPIServer.java</exclude>
-                        <exclude>**/TestServer.java</exclude>
-                        <exclude>**/HyperLedgerBundle.java</exclude>
-                        <exclude>**/SignaturOperationCounter.java</exclude>
-                        <exclude>**/BitcoinPersistentBlocks.java</exclude>
-                        <exclude>**/UnitTestBitcoinValidatorFactory.java</exclude>
-                        <exclude>**/Mempool.java</exclude>
-                        <exclude>**/DefaultBlockStore.java</exclude>
-                        <exclude>**/CoreOutbox.java</exclude>
-                        <exclude>**/TransactionRepresentation.java</exclude>
-                        <exclude>**/BlockRepresentation.java</exclude>
-                        <exclude>**/SupernodeModule.java</exclude>
-                        <exclude>**/InMemoryConnector.java</exclude>
-                        <exclude>**/BCSAPIClient.java</exclude>
-                        <exclude>**/WireFormatter.java</exclude>
-                        <exclude>**/Transaction.java</exclude>
-                        <exclude>**/ScriptBuilder.java</exclude>
-                        <exclude>**/Block.java</exclude>
-                        <exclude>**/APITransaction.java</exclude>
-                        <exclude>**/APIBlock.java</exclude>
-                        <exclude>**/TransactionFactory.java</exclude>
-                        <exclude>**/MultiSigSigner.java</exclude>
-                        <exclude>**/MasterPublicChain.java</exclude>
-                        <exclude>**/MasterPrivateChain.java</exclude>
+                            <!-- ignore java files that JavaNCSS can't parse -->
+                            <!-- these must be repeated in plugin section above -->
+                            <exclude>**/BCSAPIServer.java</exclude>
+                            <exclude>**/TestServer.java</exclude>
+                            <exclude>**/HyperLedgerBundle.java</exclude>
+                            <exclude>**/SignaturOperationCounter.java</exclude>
+                            <exclude>**/BitcoinPersistentBlocks.java</exclude>
+                            <exclude>**/UnitTestBitcoinValidatorFactory.java</exclude>
+                            <exclude>**/Mempool.java</exclude>
+                            <exclude>**/DefaultBlockStore.java</exclude>
+                            <exclude>**/CoreOutbox.java</exclude>
+                            <exclude>**/TransactionRepresentation.java</exclude>
+                            <exclude>**/BlockRepresentation.java</exclude>
+                            <exclude>**/SupernodeModule.java</exclude>
+                            <exclude>**/InMemoryConnector.java</exclude>
+                            <exclude>**/BCSAPIClient.java</exclude>
+                            <exclude>**/WireFormatter.java</exclude>
+                            <exclude>**/Transaction.java</exclude>
+                            <exclude>**/ScriptBuilder.java</exclude>
+                            <exclude>**/Block.java</exclude>
+                            <exclude>**/APITransaction.java</exclude>
+                            <exclude>**/APIBlock.java</exclude>
+                            <exclude>**/TransactionFactory.java</exclude>
+                            <exclude>**/MultiSigSigner.java</exclude>
+                            <exclude>**/MasterPublicChain.java</exclude>
+                            <exclude>**/MasterPrivateChain.java</exclude>
                         </excludes>
                     </instrumentation>
                     <formats>

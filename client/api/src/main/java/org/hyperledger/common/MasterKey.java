@@ -16,13 +16,13 @@ package org.hyperledger.common;
 /**
  * A hierarchical and deterministical key generator following BIP32 @Link https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
  */
-public interface MasterKey {
+public interface MasterKey<K extends Key> {
     /**
      * Get the master EC key. This is the half of the generators entropy
      *
      * @return master key
      */
-    Key getMaster();
+    K getMaster();
 
     /**
      * Get the additional entropy used to derive further keys from master
@@ -68,7 +68,7 @@ public interface MasterKey {
      *                              a key can not be derived with the sequence number. Use an other. And more importantly record the exact condition this
      *                              happened as cryptographers could get rather excited of a concrete demonstration of such condition in a 256 bit key space.
      */
-    Key getKey(int sequence) throws HyperLedgerException;
+    K getKey(int sequence) throws HyperLedgerException;
 
     /**
      * Generate child MasterKey capable of further generations.

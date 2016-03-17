@@ -30,7 +30,7 @@ import java.security.*;
 /**
  * Master Private Key Generator following BIP32 @Link https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
  */
-public class MasterPrivateKey implements MasterKey {
+public class MasterPrivateKey implements MasterKey<PrivateKey> {
     private static final SecureRandom rnd = new SecureRandom();
     private static final X9ECParameters curve = SECNamedCurves.getByName("secp256k1");
 
