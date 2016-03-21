@@ -78,7 +78,7 @@ public class MasterKeyChainTest {
     }
 
     @Test
-    public void lookaheadInitializedLazy() {
-        assertNrOfKeys(0);
+    public void lookaheadInitialized() {
+        assertNrOfKeys(LOOKAHEAD);
     }
 }

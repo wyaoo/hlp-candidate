@@ -16,20 +16,20 @@ package org.hyperledger.account;
 import com.typesafe.config.ConfigFactory;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.hyperledger.api.BCSAPI;
-import org.hyperledger.common.Address;
-import org.hyperledger.common.MasterPrivateKey;
-import org.hyperledger.common.PrivateKey;
-import org.hyperledger.common.Transaction;
+import org.hyperledger.common.*;
 import org.hyperledger.test.RegtestRule;
 import org.hyperledger.test.TestServer;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.security.Security;
 
 import static org.hyperledger.account.ActionWaiter.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class AccountOperationsInBlocksTest {
     @BeforeClass
@@ -39,6 +39,9 @@ public class AccountOperationsInBlocksTest {
 
     @ClassRule
     public static RegtestRule regtestRule = new RegtestRule(ConfigFactory.parseResources("test-config.json"));
+
+    @Rule
+    public ExpectedException expectedEx = ExpectedException.none();
 
     @Test
     public void sendToAddressTest() throws Exception {
@@ -118,5 +121,51 @@ public class AccountOperationsInBlocksTest {
         ActionWaiter.execute(() -> testServer.mineOneBlock(), expectedOne(otherCoinsAccount));
 
         assertEquals(500000, otherCoinsAccount.getCoins().getTotalSatoshis());
+    }
+
+    @Test
+    public void testNotSufficientSources() throws Exception {
+        long fee = 5000;
+        long amount = 8000;
+
+        expectedEx.expect(HyperLedgerException.class);
+        expectedEx.expectMessage("Insufficient sources for " + amount + " + " + fee);
+
+        TransactionFactory factory = creditSenderAccount(10000);
+
+        factory.getSufficientSources(amount, fee).getCoins().stream().mapToLong((c) -> c.getOutput().getValue()).sum();
+    }
+
+    @Test
+    public void testSufficientSources() throws Exception {
+        TransactionFactory factory = creditSenderAccount(10000);
+
+        long fee = 5000;
+        long amount = 5000;
+        long sum = factory.getSufficientSources(amount, fee).getCoins().stream().mapToLong((c) -> c.getOutput().getValue()).sum();
+        assertTrue("The returned sources [" + sum + "] is less than expected amount + fee [" + amount + " + " + fee + "]", sum <= amount + fee);
+    }
+
+    private TransactionFactory creditSenderAccount(long amount) throws Exception {
+        BCSAPI api = regtestRule.getBCSAPI();
+        TestServer testServer = regtestRule.getTestServer();
+
+        ConfirmationManager confirmationManager = new ConfirmationManager();
+        confirmationManager.init(api, 101);
+
+        KeyListChain senderKeyChain = new KeyListChain(PrivateKey.createNew(true));
+
+        UIAddress senderAddress = new UIAddress(UIAddress.Network.TEST, senderKeyChain.getNextReceiverAddress());
+        BaseAccount senderAccount = new BaseAccount(senderKeyChain);
+        senderAccount.sync(api);
+        api.registerTransactionListener(senderAccount);
+        confirmationManager.addConfirmationListener(senderAccount);
+
+        ActionWaiter.execute(() -> testServer.sendTo(senderAddress.toString(), amount), expected(senderAccount, 2));
+
+        assertEquals("Incorrect balance", amount, senderAccount.getCoins().getTotalSatoshis());
+        assertEquals("Incorrect confirmed", amount, senderAccount.getConfirmedCoins().getTotalSatoshis());
+
+        return new BaseTransactionFactory(senderAccount);
     }
 }

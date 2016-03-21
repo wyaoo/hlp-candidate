@@ -95,7 +95,7 @@ public class BaseTransactionFactory implements TransactionFactory {
         candidates.sort(spendPreferenceOrder);
         for (Coin c : candidates) {
             result.add(c);
-            if (total(result) >= fee)
+            if (total(result) >= amount + fee)
                 return new CoinBucket(result);
         }
 
@@ -103,7 +103,7 @@ public class BaseTransactionFactory implements TransactionFactory {
         candidates.sort(spendPreferenceOrder);
         for (Coin c : candidates) {
             result.add(c);
-            if (total(result) >= fee)
+            if (total(result) >= amount + fee)
                 return new CoinBucket(result);
         }
 
@@ -111,7 +111,7 @@ public class BaseTransactionFactory implements TransactionFactory {
         candidates.sort(spendPreferenceOrder);
         for (Coin c : candidates) {
             result.add(c);
-            if (total(result) >= fee)
+            if (total(result) >= amount + fee)
                 return new CoinBucket(result);
         }
 

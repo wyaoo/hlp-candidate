@@ -36,7 +36,7 @@ public class BitcoinRegtestValidatorConfig extends BitcoinProductionValidatorCon
 
     @Override
     public BigInteger getMinimumTarget() {
-        return BigInteger.valueOf(0xFFFFL).shiftLeft(239);
+        return BigInteger.valueOf(0x7fffff).shiftLeft(8 * (0x20 - 3));
     }
 
     @Override

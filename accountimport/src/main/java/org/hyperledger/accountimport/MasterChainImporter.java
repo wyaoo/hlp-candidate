@@ -25,6 +25,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.StreamSupport;
 
 /**
@@ -51,6 +52,8 @@ public class MasterChainImporter {
 
     private final MemoryCompacter memoryCompacter;
 
+    private final AtomicLong processedItems = new AtomicLong();
+
     public MasterChainImporter(final InputStream stream, final int maxThreadCount, final MemoryCompacter memoryCompacter) {
         this.stream = stream;
         pool = new ForkJoinPool(maxThreadCount);
@@ -73,11 +76,19 @@ public class MasterChainImporter {
                         if (measureMemoryUsage) {
                             storeChainPair(item.index, privateChain, publicChain);
                         }
+                        logProcessedItem(maxCount);
                         return duration;
                     } catch (final HyperLedgerException e) {
                         throw new RuntimeException(e);
                     }
                 }).summaryStatistics();
+    }
+
+    private void logProcessedItem(final long maxCount) {
+        final long incrementedCount = processedItems.incrementAndGet();
+        if (incrementedCount % IMPORT_LOGGING_FREQUENCY == 0) {
+            log.info("Processed {} items out of {}", incrementedCount, maxCount);
+        }
     }
 
     /**

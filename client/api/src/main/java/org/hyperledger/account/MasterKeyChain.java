@@ -35,9 +35,10 @@ public class MasterKeyChain<K extends Key> {
     private final int lookAhead;
     private int nextSequence;
 
-    public MasterKeyChain(MasterKey<K> master, int lookAhead) {
+    public MasterKeyChain(MasterKey<K> master, int lookAhead) throws HyperLedgerException {
         this.master = master;
         this.lookAhead = lookAhead;
+        ensureLookAhead(0);
     }
 
     public int getLookAhead() {
@@ -45,7 +46,7 @@ public class MasterKeyChain<K extends Key> {
     }
 
     private void ensureLookAhead(int from) throws HyperLedgerException {
-        while (keyIDForAddress.size() <= (from + lookAhead)) {
+        while (keyIDForAddress.size() < (from + lookAhead)) {
             int keyIndex = keyIDForAddress.size();
             K key = master.getKey(keyIndex);
             keyCache.put(keyIndex, key);
@@ -54,7 +55,7 @@ public class MasterKeyChain<K extends Key> {
     }
 
     public synchronized K getKey(int i) throws HyperLedgerException {
-        ensureLookAhead(i);
+        ensureLookAhead(i + 1);
         return keyCache.get(i);
     }
 
