@@ -44,11 +44,14 @@
         <scodec-bits.version>1.0.11</scodec-bits.version>
         <scodec-core.version>1.8.3</scodec-core.version>
         <scodec-scalaz.version>1.1.0</scodec-scalaz.version>
+        <!--<scalatest.version>3.0.0-M15</scalatest.version>
+        <scalacheck.version>1.13.0</scalacheck.version>
+        <scalamock.version>3.2.2</scalamock.version>-->
         <scalatest.version>2.2.4</scalatest.version>
         <scalacheck.version>1.12.4</scalacheck.version>
         <scalamock.version>3.2</scalamock.version>
         <bouncycastle.version>1.52</bouncycastle.version>
-        <protobuf.version>2.5.0</protobuf.version>
+        <protobuf.version>3.0.0-beta-2</protobuf.version>
         <leveldbjni.version>1.8</leveldbjni.version>
         <scijava.version>2.1.0</scijava.version>
         <jna.version>4.2.1</jna.version>
@@ -360,7 +363,7 @@
         <plugins>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
+                <version>3.5.1</version>
                 <configuration>
                     <source>${java.compiler.version}</source>
                     <target>${java.compiler.version}</target>
@@ -580,4 +583,3 @@
     </reporting>
 
 </project>
-

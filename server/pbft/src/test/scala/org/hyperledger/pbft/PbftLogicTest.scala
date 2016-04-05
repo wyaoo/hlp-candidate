@@ -235,7 +235,7 @@ class PbftLogicTest extends TestKit(ActorSystem("test", ConfigFactory.load(Confi
       send(NewView(2, 1, viewChanges, dummyBlockHeader, commits))
 
       receiveNoMessage()
-      pbft.stateData.currentViewSeq shouldEqual 1
+      pbft.stateData.currentViewSeq shouldEqual 0
     }
 
     "take PbftHandler to new view after recovery" in {
